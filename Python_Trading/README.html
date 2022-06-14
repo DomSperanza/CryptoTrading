@@ -1,0 +1,391 @@
+<h1>coinbasepro-python</h1>
+<p><a href="https://travis-ci.org/danpaquin/coinbasepro-python"><img alt="Build Status" src="https://travis-ci.org/danpaquin/coinbasepro-python.svg?branch=master" /></a></p>
+<p>The Python client for the <a href="https://docs.pro.coinbase.com/">Coinbase Pro API</a> (formerly known as
+the GDAX)</p>
+<h5>Provided under MIT License by Daniel Paquin.</h5>
+<p><em>Note: this library may be subtly broken or buggy. The code is released under
+the MIT License – please take the following message to heart:</em></p>
+<blockquote>
+<p>THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</p>
+</blockquote>
+<h2>Benefits</h2>
+<ul>
+<li>A simple to use python wrapper for both public and authenticated endpoints.</li>
+<li>In about 10 minutes, you could be programmatically trading on one of the
+largest Bitcoin exchanges in the <em>world</em>!</li>
+<li>Do not worry about handling the nuances of the API with easy-to-use methods
+for every API endpoint.</li>
+<li>Gain an advantage in the market by getting under the hood of CB Pro to learn
+what and who is behind every tick.</li>
+</ul>
+<h2>Under Development</h2>
+<ul>
+<li>Test Scripts</li>
+<li>Additional Functionality for the real-time order book</li>
+<li>FIX API Client <strong>Looking for assistance</strong></li>
+</ul>
+<h2>Getting Started</h2>
+<p>This README is documentation on the syntax of the python client presented in
+this repository. See function docstrings for full syntax details.<br />
+<strong>This API attempts to present a clean interface to CB Pro, but in order to use it
+to its full potential, you must familiarize yourself with the official CB Pro
+documentation.</strong></p>
+<ul>
+<li>
+<p>https://docs.pro.coinbase.com/</p>
+</li>
+<li>
+<p>You may manually install the project or use <code>pip</code>:
+```python
+pip install cbpro</p>
+</li>
+</ul>
+<h1>or</h1>
+<p>pip install git+git://github.com/danpaquin/coinbasepro-python.git
+```</p>
+<h3>Public Client</h3>
+<p>Only some endpoints in the API are available to everyone.  The public endpoints
+can be reached using <code>PublicClient</code></p>
+<p><code>python
+import cbpro
+public_client = cbpro.PublicClient()</code></p>
+<h3>PublicClient Methods</h3>
+<ul>
+<li>
+<p><a href="https://docs.pro.coinbase.com//#get-products">get_products</a>
+<code>python
+public_client.get_products()</code></p>
+</li>
+<li>
+<p><a href="https://docs.pro.coinbase.com/#get-product-order-book">get_product_order_book</a>
+```python</p>
+</li>
+</ul>
+<h1>Get the order book at the default level.</h1>
+<p>public_client.get_product_order_book('BTC-USD')</p>
+<h1>Get the order book at a specific level.</h1>
+<p>public_client.get_product_order_book('BTC-USD', level=1)
+```</p>
+<ul>
+<li><a href="https://docs.pro.coinbase.com/#get-product-ticker">get_product_ticker</a>
+```python</li>
+</ul>
+<h1>Get the product ticker for a specific product.</h1>
+<p>public_client.get_product_ticker(product_id='ETH-USD')
+```</p>
+<ul>
+<li><a href="https://docs.pro.coinbase.com/#get-trades">get_product_trades</a> (paginated)
+```python</li>
+</ul>
+<h1>Get the product trades for a specific product.</h1>
+<h1>Returns a generator</h1>
+<p>public_client.get_product_trades(product_id='ETH-USD')
+```</p>
+<ul>
+<li><a href="https://docs.pro.coinbase.com/#get-historic-rates">get_product_historic_rates</a>
+```python
+public_client.get_product_historic_rates('ETH-USD')</li>
+</ul>
+<h1>To include other parameters, see function docstring:</h1>
+<p>public_client.get_product_historic_rates('ETH-USD', granularity=3000)
+```</p>
+<ul>
+<li>
+<p><a href="https://docs.pro.coinbase.com/#get-24hr-stats">get_product_24hr_stats</a>
+<code>python
+public_client.get_product_24hr_stats('ETH-USD')</code></p>
+</li>
+<li>
+<p><a href="https://docs.pro.coinbase.com/#get-currencies">get_currencies</a>
+<code>python
+public_client.get_currencies()</code></p>
+</li>
+<li>
+<p><a href="https://docs.pro.coinbase.com/#time">get_time</a>
+<code>python
+public_client.get_time()</code></p>
+</li>
+</ul>
+<h3>Authenticated Client</h3>
+<p>Not all API endpoints are available to everyone.
+Those requiring user authentication can be reached using <code>AuthenticatedClient</code>.
+You must setup API access within your
+<a href="https://pro.coinbase.com/profile/api">account settings</a>.
+The <code>AuthenticatedClient</code> inherits all methods from the <code>PublicClient</code>
+class, so you will only need to initialize one if you are planning to
+integrate both into your script.</p>
+<p>```python
+import cbpro
+auth_client = cbpro.AuthenticatedClient(key, b64secret, passphrase)</p>
+<h1>Use the sandbox API (requires a different set of API access credentials)</h1>
+<p>auth_client = cbpro.AuthenticatedClient(key, b64secret, passphrase,
+                                  api_url="https://api-public.sandbox.pro.coinbase.com")
+```</p>
+<h3>Pagination</h3>
+<p>Some calls are <a href="https://docs.pro.coinbase.com/#pagination">paginated</a>, meaning multiple
+calls must be made to receive the full set of data. The CB Pro Python API provides
+an abstraction for paginated endpoints in the form of generators which provide a
+clean interface for iteration but may make multiple HTTP requests behind the 
+scenes. The pagination options <code>before</code>, <code>after</code>, and <code>limit</code> may be supplied as
+keyword arguments if desired, but aren't necessary for typical use cases.
+```python
+fills_gen = auth_client.get_fills()</p>
+<h1>Get all fills (will possibly make multiple HTTP requests)</h1>
+<p>all_fills = list(fills_gen)
+<code>One use case for pagination parameters worth pointing out is retrieving only 
+new data since the previous request. For the case of `get_fills()`, the 
+`trade_id` is the parameter used for indexing. By passing 
+`before=some_trade_id`, only fills more recent than that `trade_id` will be 
+returned. Note that when using `before`, a maximum of 100 entries will be 
+returned - this is a limitation of CB Pro.</code>python
+from itertools import islice</p>
+<h1>Get 5 most recent fills</h1>
+<p>recent_fills = islice(auth_client.get_fills(), 5)</p>
+<h1>Only fetch new fills since last call by utilizing <code>before</code> parameter.</h1>
+<p>new_fills = auth_client.get_fills(before=recent_fills[0]['trade_id'])
+```</p>
+<h3>AuthenticatedClient Methods</h3>
+<ul>
+<li>
+<p><a href="https://docs.pro.coinbase.com/#list-accounts">get_accounts</a>
+<code>python
+auth_client.get_accounts()</code></p>
+</li>
+<li>
+<p><a href="https://docs.pro.coinbase.com/#get-an-account">get_account</a>
+<code>python
+auth_client.get_account("7d0f7d8e-dd34-4d9c-a846-06f431c381ba")</code></p>
+</li>
+<li>
+<p><a href="https://docs.pro.coinbase.com/#get-account-history">get_account_history</a> (paginated)
+```python</p>
+</li>
+</ul>
+<h1>Returns generator:</h1>
+<p>auth_client.get_account_history("7d0f7d8e-dd34-4d9c-a846-06f431c381ba")
+```</p>
+<ul>
+<li><a href="https://docs.pro.coinbase.com/#get-holds">get_account_holds</a> (paginated)
+```python</li>
+</ul>
+<h1>Returns generator:</h1>
+<p>auth_client.get_account_holds("7d0f7d8e-dd34-4d9c-a846-06f431c381ba")
+```</p>
+<ul>
+<li><a href="https://docs.pro.coinbase.com/#place-a-new-order">buy &amp; sell</a>
+```python</li>
+</ul>
+<h1>Buy 0.01 BTC @ 100 USD</h1>
+<p>auth_client.buy(price='100.00', #USD
+               size='0.01', #BTC
+               order_type='limit',
+               product_id='BTC-USD')
+<code></code>python</p>
+<h1>Sell 0.01 BTC @ 200 USD</h1>
+<p>auth_client.sell(price='200.00', #USD
+                size='0.01', #BTC
+                order_type='limit',
+                product_id='BTC-USD')
+<code></code>python</p>
+<h1>Limit order-specific method</h1>
+<p>auth_client.place_limit_order(product_id='BTC-USD', 
+                              side='buy', 
+                              price='200.00', 
+                              size='0.01')
+<code></code>python</p>
+<h1>Place a market order by specifying amount of USD to use.</h1>
+<h1>Alternatively, <code>size</code> could be used to specify quantity in BTC amount.</h1>
+<p>auth_client.place_market_order(product_id='BTC-USD', 
+                               side='buy', 
+                               funds='100.00')
+<code></code>python</p>
+<h1>Stop order. <code>funds</code> can be used instead of <code>size</code> here.</h1>
+<p>auth_client.place_stop_order(product_id='BTC-USD', 
+                              stop_type='loss', 
+                              price='200.00', 
+                              size='0.01')
+```</p>
+<ul>
+<li><a href="https://docs.pro.coinbase.com/#cancel-an-order">cancel_order</a>
+<code>python
+auth_client.cancel_order("d50ec984-77a8-460a-b958-66f114b0de9b")</code></li>
+<li>
+<p><a href="https://docs.pro.coinbase.com/#cancel-all">cancel_all</a>
+<code>python
+auth_client.cancel_all(product_id='BTC-USD')</code></p>
+</li>
+<li>
+<p><a href="https://docs.pro.coinbase.com/#list-orders">get_orders</a> (paginated)
+```python</p>
+</li>
+</ul>
+<h1>Returns generator:</h1>
+<p>auth_client.get_orders()
+```</p>
+<ul>
+<li>
+<p><a href="https://docs.pro.coinbase.com/#get-an-order">get_order</a>
+<code>python
+auth_client.get_order("d50ec984-77a8-460a-b958-66f114b0de9b")</code></p>
+</li>
+<li>
+<p><a href="https://docs.pro.coinbase.com/#list-fills">get_fills</a> (paginated)
+```python</p>
+</li>
+</ul>
+<h1>All return generators</h1>
+<p>auth_client.get_fills()</p>
+<h1>Get fills for a specific order</h1>
+<p>auth_client.get_fills(order_id="d50ec984-77a8-460a-b958-66f114b0de9b")</p>
+<h1>Get fills for a specific product</h1>
+<p>auth_client.get_fills(product_id="ETH-BTC")
+```</p>
+<ul>
+<li><a href="https://docs.pro.coinbase.com/#depositwithdraw">deposit &amp; withdraw</a>
+<code>python
+depositParams = {
+        'amount': '25.00', # Currency determined by account specified
+        'coinbase_account_id': '60680c98bfe96c2601f27e9c'
+}
+auth_client.deposit(depositParams)</code>
+```python</li>
+</ul>
+<h1>Withdraw from CB Pro into Coinbase Wallet</h1>
+<p>withdrawParams = {
+        'amount': '1.00', # Currency determined by account specified
+        'coinbase_account_id': '536a541fa9393bb3c7000023'
+}
+auth_client.withdraw(withdrawParams)
+```</p>
+<h3>WebsocketClient</h3>
+<p>If you would like to receive real-time market updates, you must subscribe to the
+<a href="https://docs.pro.coinbase.com/#websocket-feed">websocket feed</a>.</p>
+<h4>Subscribe to a single product</h4>
+<p>```python
+import cbpro</p>
+<h1>Parameters are optional</h1>
+<p>wsClient = cbpro.WebsocketClient(url="wss://ws-feed.pro.coinbase.com",
+                                products="BTC-USD",
+                                channels=["ticker"])</p>
+<h1>Do other stuff...</h1>
+<p>wsClient.close()
+```</p>
+<h4>Subscribe to multiple products</h4>
+<p>```python
+import cbpro</p>
+<h1>Parameters are optional</h1>
+<p>wsClient = cbpro.WebsocketClient(url="wss://ws-feed.pro.coinbase.com",
+                                products=["BTC-USD", "ETH-USD"],
+                                channels=["ticker"])</p>
+<h1>Do other stuff...</h1>
+<p>wsClient.close()
+```</p>
+<h3>WebsocketClient + Mongodb</h3>
+<p>The <code>WebsocketClient</code> now supports data gathering via MongoDB. Given a
+MongoDB collection, the <code>WebsocketClient</code> will stream results directly into
+the database collection.
+```python</p>
+<h1>import PyMongo and connect to a local, running Mongo instance</h1>
+<p>from pymongo import MongoClient
+import cbpro
+mongo_client = MongoClient('mongodb://localhost:27017/')</p>
+<h1>specify the database and collection</h1>
+<p>db = mongo_client.cryptocurrency_database
+BTC_collection = db.BTC_collection</p>
+<h1>instantiate a WebsocketClient instance, with a Mongo collection as a parameter</h1>
+<p>wsClient = cbpro.WebsocketClient(url="wss://ws-feed.pro.coinbase.com", products="BTC-USD",
+    mongo_collection=BTC_collection, should_print=False)
+wsClient.start()
+```</p>
+<h3>WebsocketClient Methods</h3>
+<p>The <code>WebsocketClient</code> subscribes in a separate thread upon initialization.
+There are three methods which you could overwrite (before initialization) so it
+can react to the data streaming in.  The current client is a template used for
+illustration purposes only.</p>
+<ul>
+<li>onOpen - called once, <em>immediately before</em> the socket connection is made, this
+is where you want to add initial parameters.</li>
+<li>onMessage - called once for every message that arrives and accepts one
+argument that contains the message of dict type.</li>
+<li>on_close - called once after the websocket has been closed.</li>
+<li>close - call this method to close the websocket connection (do not overwrite).
+```python
+import cbpro, time
+class myWebsocketClient(cbpro.WebsocketClient):
+    def on_open(self):
+        self.url = "wss://ws-feed.pro.coinbase.com/"
+        self.products = ["LTC-USD"]
+        self.message_count = 0
+        print("Lets count the messages!")
+    def on_message(self, msg):
+        self.message_count += 1
+        if 'price' in msg and 'type' in msg:
+            print ("Message type:", msg["type"],
+                   "\t@ {:.3f}".format(float(msg["price"])))
+    def on_close(self):
+        print("-- Goodbye! --")</li>
+</ul>
+<p>wsClient = myWebsocketClient()
+wsClient.start()
+print(wsClient.url, wsClient.products)
+while (wsClient.message_count &lt; 500):
+    print ("\nmessage_count =", "{} \n".format(wsClient.message_count))
+    time.sleep(1)
+wsClient.close()
+```</p>
+<h2>Testing</h2>
+<p>A test suite is under development. Tests for the authenticated client require a 
+set of sandbox API credentials. To provide them, rename 
+<code>api_config.json.example</code> in the tests folder to <code>api_config.json</code> and edit the 
+file accordingly. To run the tests, start in the project directory and run
+<code>python -m pytest</code></p>
+<h3>Real-time OrderBook</h3>
+<p>The <code>OrderBook</code> subscribes to a websocket and keeps a real-time record of
+the orderbook for the product_id input.  Please provide your feedback for future
+improvements.</p>
+<p><code>python
+import cbpro, time
+order_book = cbpro.OrderBook(product_id='BTC-USD')
+order_book.start()
+time.sleep(10)
+order_book.close()</code></p>
+<h3>Testing</h3>
+<p>Unit tests are under development using the pytest framework. Contributions are 
+welcome!</p>
+<p>To run the full test suite, in the project 
+directory run:
+<code>bash
+python -m pytest</code></p>
+<h2>Change Log</h2>
+<p><em>1.1.2</em> <strong>Current PyPI release</strong>
+- Refactor project for Coinbase Pro
+- Major overhaul on how pagination is handled</p>
+<p><em>1.0</em>
+- The first release that is not backwards compatible
+- Refactored to follow PEP 8 Standards
+- Improved Documentation</p>
+<p><em>0.3</em>
+- Added crypto and LTC deposit &amp; withdraw (undocumented).
+- Added support for Margin trading (undocumented).
+- Enhanced functionality of the WebsocketClient.
+- Soft launch of the OrderBook (undocumented).
+- Minor bug squashing &amp; syntax improvements.</p>
+<p><em>0.2.2</em>
+- Added additional API functionality such as cancelAll() and ETH withdrawal.</p>
+<p><em>0.2.1</em>
+- Allowed <code>WebsocketClient</code> to operate intuitively and restructured example
+workflow.</p>
+<p><em>0.2.0</em>
+- Renamed project to GDAX-Python
+- Merged Websocket updates to handle errors and reconnect.</p>
+<p><em>0.1.2</em>
+- Updated JSON handling for increased compatibility among some users.
+- Added support for payment methods, reports, and Coinbase user accounts.
+- Other compatibility updates.</p>
+<p><em>0.1.1b2</em>
+- Original PyPI Release.</p>
