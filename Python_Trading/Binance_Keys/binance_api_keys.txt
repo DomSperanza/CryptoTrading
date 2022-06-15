@@ -1,3 +1,0 @@
-Type,Key
-API_key,NPceDROdKiKnu5WpaAtCT1sT3apV48bO68IJMOdDPlDfXFihh8Zo1F9EPrQJYvcN
-Secret_key,FxhmKCOoJbi2lspuN3dCQ7RpNfdzSewzz6DHoQWzdC5Cgaw1V0y3vbRGCKawsRwf
