@@ -79,7 +79,7 @@ def get_live_stream(engine,order = None):
         df_TSL = pd.read_sql(f"""SELECT * FROM ETHUSDT WHERE \
                              Time_Stamp>='{pd.to_datetime(order['transactTime'],unit ='ms')}'""",engine)
         df_TSL['Benchmark'] = df_TSL['price'].cummax()
-        df_TSL['TSL'] = df_TSL['Benchmark']*0.99
+        df_TSL['TSL'] = df_TSL['Benchmark']*0.98
     else:
         df_TSL = pd.DataFrame(columns = ['Time_Stamp','price','Benchmark','TSL'])
     return(df_TSL)
@@ -166,15 +166,16 @@ def trader(investment,client,tradesdf,engine,order = None):
             buy_order = None
         return df_indicators,buy_order,tradesdf
         
-    
+
+#%%
 #Get a data frame with all information for buy and sell for my account
 def Get_trades_df (symbol,client):
     df = pd.DataFrame(client.get_my_trades(symbol = symbol))
     df['time'] = pd.to_datetime(df['time'],unit = 'ms')
     df['quoteQty'] = df['quoteQty'].astype(float)
-    df = df.groupby(['orderId','time','commissionAsset','isBuyer'])['quoteQty'].sum().to_frame('Total_trade').reset_index()
-    df['Price_delta'] = np.where(df['isBuyer']==True,-1.001,.999)*df['Total_trade']
-    return df
+    df2 = df.groupby(['orderId','time','commissionAsset','isBuyer','price'])['quoteQty'].sum().to_frame('Total_trade').reset_index()
+    df2['Price_delta'] = np.where(df2['isBuyer']==True,-1.00075,.99925)*df2['Total_trade']
+    return df2
 
         
 

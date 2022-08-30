@@ -15,7 +15,7 @@ import unicorn_binance_websocket_api as unicorn
 engine = create_engine('sqlite:///Live_Crypto_Data.db')
 
 ubwa = unicorn.BinanceWebSocketApiManager(exchange = 'binance.com')
-ubwa.create_stream('kline_1m','ETHUSDT',output = 'UnicornFy')
+ubwa.create_stream('kline_1m','ethusdt',output = 'UnicornFy')
 data = ubwa.pop_stream_data_from_stream_buffer()
 
 def SQLimport(data):
