@@ -1,6 +1,20 @@
 # Algorithmic Trading
-## Welcome to the money printer.
-This is the start of a project where we make a bot that will automattically buy and sell crypto for us. 
+This is the start of a project where we make a bot that will automatically buy and sell crypto for us. 
+
+---
+
+For updating requirements.txt, use:
+```
+pip install pipreqs
+pipreqs {path}
+```
+More info: https://github.com/bndr/pipreqs
+
+---
+
+Below is a flowchart for describing the *(desired)* structure of the program.
+
+Uses Mermaid Markdown https://mermaid.live/
 
 ```mermaid
     flowchart TD
