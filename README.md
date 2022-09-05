@@ -18,8 +18,8 @@ Uses Mermaid Markdown https://mermaid.live/
 
 ```mermaid
     flowchart TD
+    subgraph Overview
         subgraph Docker Container 
-        direction TB
         Env[Env Variables]
         
         CLI["CLI (Inputs)"] --> Symbol[Symbol]
@@ -32,13 +32,16 @@ Uses Mermaid Markdown https://mermaid.live/
         Env --> CryptoBot
 
         CryptoBot -- run --> Strategy
-        Strategy -- open/close signal --> Trade
+        CryptoBot -- open/close --> Trade
+        Strategy -- open/close signal --> CryptoBot
 
         end
         subgraph Binance
-            RealtimeData[(RealtimeData)] -- websocket --> Strategy
+
             Portfolio[(Portfolio)] -- current positions --> Strategy
+            RealtimeData[(RealtimeData)] --> Strategy
             BinanceAPI
         end
             Trade --> BinanceAPI
+    end
 ```
