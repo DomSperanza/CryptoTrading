@@ -6,7 +6,7 @@ This is the start of a project where we make a bot that will automatically buy a
 For updating requirements.txt, use:
 ```
 pip install pipreqs
-pipreqs {path}
+pipreqs . --force --ignore **/Archive
 ```
 More info: https://github.com/bndr/pipreqs
 
