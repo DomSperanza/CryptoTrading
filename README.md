@@ -32,8 +32,7 @@ Uses Mermaid Markdown https://mermaid.live/
         Env --> CryptoBot
 
         CryptoBot -- run --> Strategy
-        CryptoBot -- open/close --> Trade
-        Strategy -- open/close signal --> CryptoBot
+        Strategy -- open/close signal --> Trade
 
         end
         subgraph Binance
