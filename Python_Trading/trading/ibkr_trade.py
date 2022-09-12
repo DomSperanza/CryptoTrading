@@ -1,9 +1,9 @@
 import backtrader as bt
 
-from atreyu_backtrader_api import IDBData
+from atreyu_backtrader_api import ibdata
 from atreyu_backtrader_api import IBStore
 
-from strategies import TestStrategy
+import TestStrategy
 
 import datetime as dt
 from datetime import datetime, date, time
@@ -32,6 +32,6 @@ cerebro.setbroker(broker)
 cerebro.addstrategy(TestStrategy)
 
 #add a FixedSize sizer according to the stake
-cerebro.addsizer(bt.sizers.FixedSize, stake=10)
+# cerebro.addsizer(bt.sizers.FixedSize, stake=10)
 
 cerebro.run()
