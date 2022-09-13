@@ -2,7 +2,7 @@ from ibdataapp import IBDataApp
 import time
 import pandas as pd
 
-from ibapi.contract import Contract
+from ibcontract import IBContract
 
 
 if __name__ == "__main__":
@@ -11,16 +11,9 @@ if __name__ == "__main__":
 
     time.sleep(2)
 
-    contract = Contract()
-    # contract.symbol = "SPY"
-    # contract.secType = "STK"
-    # contract.currency = "USD"
-    # contract.exchange = "SMART"
+    # contract = IBContract("SPY")
+    contract = IBContract("BTC")
 
-    contract.symbol = "BTC"
-    contract.secType = "CRYPTO"
-    contract.currency = "USD"
-    contract.exchange = "PAXOS"
 
     # note Timezone
     dt_range = pd.date_range(start="20220328 23:59:59", end="20220401 23:59:59", freq="24H")
