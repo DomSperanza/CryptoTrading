@@ -1,11 +1,12 @@
 from ibapi.contract import Contract
 
+# TODO: create a valid symbols file
 stocks = ["SPY"]
 
 cryptos = ["BTC"]
 
 class IBContract(Contract):
-    def __init__(self, symbol):
+    def __init__(self, symbol: str):
         Contract.__init__(self)    
 
         self.symbol = symbol
