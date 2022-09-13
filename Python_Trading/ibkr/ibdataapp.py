@@ -96,8 +96,8 @@ class IBDataApp(EWrapper, EClient):
             bar_data = self.data_queue_dict[reqId].get()
 
             # ! change this conversion to work as a dataframe
-            # self.datetime_list.append(parser.parse(bar_data.date, ignoretz=True))
-            self.datetime_list.append(bar_data.date)
+            self.datetime_list.append(parser.parse(bar_data.date.replace('America/Los_Angeles',''), ignoretz=True))
+            # self.datetime_list.append(bar_data.date)
             self.open_list.append(bar_data.open)
             self.high_list.append(bar_data.high)
             self.low_list.append(bar_data.low)
