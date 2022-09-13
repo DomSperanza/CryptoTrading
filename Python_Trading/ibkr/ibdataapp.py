@@ -10,11 +10,10 @@ from threading import Thread
 import queue
 
 from dateutil import parser
-
 from datetime import datetime
 
 import pandas as pd
-
+import time
 
 class IBDataApp(EWrapper, EClient):
     def __init__(self, host, port, clientId):
@@ -95,7 +94,7 @@ class IBDataApp(EWrapper, EClient):
 
             bar_data = self.data_queue_dict[reqId].get()
 
-            # ! change this conversion to work as a dataframe
+            # ! change this conversion to work as a dataframe, rather than just replacing timezone
             self.datetime_list.append(parser.parse(bar_data.date.replace('America/Los_Angeles',''), ignoretz=True))
             # self.datetime_list.append(bar_data.date)
             self.open_list.append(bar_data.open)
@@ -140,48 +139,16 @@ class IBDataApp(EWrapper, EClient):
         }
 
         dataframe = pd.DataFrame(data, index=self.datetime_list)
+        dataframe.index.name = "date"
         dataframe.sort_index(inplace=True)
 
         return dataframe
 
 
-# if __name__ == "__main__":
+if __name__ == "__main__":
 
-#     app = IBDataApp("localhost", 7497, 0)
+    app = IBDataApp("localhost", 7497, 0)
 
-#     time.sleep(2)
+    time.sleep(2)
 
-#     contract = Contract()
-#     # contract.symbol = "SPY"
-#     # contract.secType = "STK"
-#     # contract.currency = "USD"
-#     # contract.exchange = "SMART"
-
-#     contract.symbol = "BTC"
-#     contract.secType = "CRYPTO"
-#     contract.currency = "USD"
-#     contract.exchange = "PAXOS"
-
-#     # note Timezone
-#     dt_range = pd.date_range(start="20220328 23:59:59", end="20220401 23:59:59", freq="24H")
-
-#     for dt in dt_range[::-1]:
-#         reqId = app.request_historical_data(
-#             reqId=1001,
-#             contract=contract,
-#             # TIMEZONE USED
-#             endDateTime=dt.strftime("%Y%m%d %H:%M:%S")+ " America/Los_Angeles",
-#             barSizeSetting="1 min",
-#             durationStr="1 D",
-#             whatToShow="AGGTRADES",
-#             useRTH=1,
-#             formatDate=1,
-#             keepUpToDate=False
-#         )
-
-#         time.sleep(2)
-
-#     app.disconnect()
-
-#     df = app.data_to_dataframe()
-#     df.to_csv("data/my_historical_data.csv", mode="w")
+    app.disconnect()
