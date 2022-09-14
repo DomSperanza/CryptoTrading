@@ -35,12 +35,12 @@ Uses Mermaid Markdown https://mermaid.live/
         Strategy -- open/close signal --> Trade
 
         end
-        subgraph Binance
+        subgraph Brokerage
 
             Portfolio[(Portfolio)] -- current positions --> Strategy
             RealtimeData[(RealtimeData)] --> Strategy
-            BinanceAPI
+            API
         end
-            Trade --> BinanceAPI
+            Trade --> API
     end
 ```

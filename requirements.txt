@@ -6,6 +6,4 @@ pandas==1.4.3
 python-dotenv==0.21.0
 python_binance==1.0.16
 scipy==1.7.3
-SQLAlchemy==1.4.39
 ta==0.10.2
-unicorn_binance_websocket_api==1.41.0
