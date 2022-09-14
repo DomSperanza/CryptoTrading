@@ -3,7 +3,9 @@ import backtrader as bt
 # !requires 3.2.2
 # https://stackoverflow.com/questions/63471764/importerror-cannot-import-name-warnings-from-matplotlib-dates
 import matplotlib
-from TestStrategy import TestStrategy
+from teststrategy import TestStrategy
+from teststrategy2 import SMA_CrossOver
+from testsignal import MySignal
 from ibdataapp import IBDataApp
 from ibcontract import IBContract
 import pandas as pd
@@ -12,6 +14,7 @@ import datetime as dt
 from datetime import datetime, date, time
 
 cerebro = bt.Cerebro()
+
 
 # data = IBDataApp(host='127.0.0.1', port=7497, clientId=0)
 # contract = IBContract("BTC")
@@ -28,17 +31,25 @@ cerebro.adddata(data)
 
 # # Set our desired cash start
 cerebro.broker.setcash(100000.0)
-cerebro.broker.setcommission(commission=0.1)
+# cerebro.addsizer(bt.sizers.FixedSize, stake=10)
+cerebro.broker.setcommission(commission=0.001)
 
 # # Add the test strategy
-cerebro.addstrategy(TestStrategy)
+# cerebro.addstrategy(TestStrategy)
 
-# # Add a FixedSize sizer according to the stake
-# cerebro.addsizer(bt.sizers.FixedSize, stake=10)
+cerebro.optstrategy(
+    SMA_CrossOver,
+    fast=range(5,15),
+    slow=range(30,40),
+)
 
-cerebro.run()
+# Add a signal (instead of strategy)
+# cerebro.add_signal(bt.SIGNAL_LONGSHORT, MySignal)
 
-cerebro.plot(style='bar')
+print('Starting Portfolio Value: %.2f' % cerebro.broker.getvalue())
 
-# # Print out the final result
-print(f'Final Portfolio Value: {cerebro.broker.getvalue():.2f}')
+cerebro.run(maxcpus=1)
+
+print('Final Portfolio Value: %.2f' % cerebro.broker.getvalue())
+
+# cerebro.plot(style='bar')

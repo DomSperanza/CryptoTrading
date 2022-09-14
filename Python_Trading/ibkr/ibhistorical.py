@@ -16,7 +16,8 @@ if __name__ == "__main__":
 
 
     # note Timezone
-    dt_range = pd.date_range(start="20220328 23:59:59", end="20220401 23:59:59", freq="24H")
+    dt_range = pd.date_range(start="20220328 23:59:59", end="20220328 23:59:59", freq="24H")
+    # dt_range = pd.date_range(start="20220328 23:59:59", end="20220401 23:59:59", freq="24H")
 
     for dt in dt_range[::-1]:
         reqId = app.request_historical_data(
