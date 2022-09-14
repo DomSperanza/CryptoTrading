@@ -1,76 +1,80 @@
 import os
 from dotenv import load_dotenv
+import math
 
 
-def cryptobot(symbol: str, strategy: str, paper: bool = True) -> None:
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+from binance.client import Client
+
+from strategies.strategy import *
+
+
+brokers = ['binance','ibkr']
+stocks = ['SPY','DIA']
+cryptos = ['BTCUSDT']
+
+class CryptoBot:
     '''
     Activates the cryptobot to begin trading based on a given strategy.
+    For now, will just work in Binance.
 
     Parameters:
-        symbol : str
-            The symbol of the crypto to be traded
-        strategy : str
-            The strategy to be implemented
-        paper : bool, default True
-            Paper (simulated) or real trading
-
-    Returns:
-        None
-
+    symbol : str
+        The symbol of the crypto to be traded
+    strategy : str
+        The strategy to be implemented
     '''
 
-    # loads in environment variables from .env file
-    load_dotenv()
-    if paper:
-        # test/paper enviro
-        key_var = 'BINANCE_PAPER_API'
-        secret_var = 'BINANCE_PAPER_SECRET'
-    else:
-        pass
-        # # real trading
-        key_var = 'BINANCE_API'
-        secret_var = 'BINANCE_SECRET'
+    def __init__(self, 
+                symbol: str, 
+                strategy: Strategy,
+                client: Client = Client(),
+                df: pd.DataFrame = None,
+                broker: str = 'binance') -> None:
 
-    # assign desired API keys
-    api_key = os.getenv(key_var)
-    api_secret = os.getenv(secret_var)
+        # validity checks (currently restricting symbols)
+        if broker not in brokers:
+            raise ValueError(f"Invalid Broker: {broker}")
+        if symbol not in cryptos:
+            raise ValueError(f"Invalid Symbol: {symbol}")
 
-    # print(api_key, api_secret)
-    # client = Client(api_key, api_secret, testnet=paper)
+        self.symbol = symbol
+        self.strategy = strategy
+        self.client = client
+        self.df = df
+        self.broker = broker
+
+        
+
+    def getdata(self, interval: str ='1m', lookback: str ='400'):
+        frame = pd.DataFrame(self.client.get_historical_klines(self.symbol,
+                                                        interval,
+                                                        lookback + ' hours ago UTC'))
+        frame = frame.iloc[:, 0:6]
+        frame.columns = ['Time', 'Open', 'High', 'Low', 'Close', 'Volume']
+        frame.set_index('Time', inplace=True)
+        frame.index = pd.to_datetime(frame.index, unit='ms')
+        frame = frame.astype(float)
+        self.df = frame
+        return self.df
+
 
 
 if __name__ == '__main__':
 
-    # input restrictions
-    allowed_symbols = ['BTCUSDT']
-    allowed_strategies = ['heikenashi']
-    bools = {'true': True, 'false': False, }
+    # loads in environment variables from .env file
+    load_dotenv()
 
-    # user input + restriction checks
-    while True:
-        symbol = input('Enter Symbol: ').upper()
+    # assign desired API keys
+    api_key = os.getenv('BINANCE_PAPER_API')
+    api_secret = os.getenv('BINANCE_PAPER_SECRET')
 
-        if symbol in allowed_symbols:
-            break
-
-        print("-- Enter a valid symbol --")
-
-    while True:
-        strategy = input('Enter Strategy: ').lower()
-
-        if strategy in allowed_strategies:
-            break
-
-        print("-- Enter a valid strategy --")
-
-    while True:
-        paper = input('Paper trading? (True or False):').lower()
-
-        try:
-            paper = bools[paper]
-            break
-        except:
-            print("-- Enter a valid boolean --")
+    # client = Client(api_key, api_secret,testnet=True)
 
     # run bot with user inputs
-    cryptobot(symbol, strategy, paper)
+    bot = CryptoBot("BTCUSDT", Strategy)
+    data = bot.getdata(lookback='100')
+    print(data.head(),'\n',data.tail())
