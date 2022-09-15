@@ -1,20 +1,20 @@
 import os
 from dotenv import load_dotenv
-import math
 
-
-import numpy as np
 import pandas as pd
+
+import math
+import numpy as np
 import matplotlib.pyplot as plt
 
 from binance.client import Client
 
-from strategies.strategy import *
+import strategies as st
 
+BROKERS = ['binance','ibkr']
+STOCKS = ['SPY','DIA']
+CRYPTOS = ['BNBUSDT', 'BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'DOGEUSDT']
 
-brokers = ['binance','ibkr']
-stocks = ['SPY','DIA']
-cryptos = ['BTCUSDT']
 
 class CryptoBot:
     '''
@@ -28,17 +28,19 @@ class CryptoBot:
         The strategy to be implemented
     '''
 
+
+
     def __init__(self, 
                 symbol: str, 
-                strategy: Strategy,
+                strategy: st.StrategyClass,
                 client: Client = Client(),
                 df: pd.DataFrame = None,
                 broker: str = 'binance') -> None:
 
         # validity checks (currently restricting symbols)
-        if broker not in brokers:
+        if broker not in BROKERS:
             raise ValueError(f"Invalid Broker: {broker}")
-        if symbol not in cryptos:
+        if symbol not in CRYPTOS:
             raise ValueError(f"Invalid Symbol: {symbol}")
 
         self.symbol = symbol
@@ -49,7 +51,7 @@ class CryptoBot:
 
         
 
-    def getdata(self, interval: str ='1m', lookback: str ='400'):
+    def getdata(self, interval: str ='1m', lookback: str ='400') -> pd.DataFrame:
         frame = pd.DataFrame(self.client.get_historical_klines(self.symbol,
                                                         interval,
                                                         lookback + ' hours ago UTC'))
@@ -61,7 +63,7 @@ class CryptoBot:
         self.df = frame
         return self.df
 
-
+    
 
 if __name__ == '__main__':
 
@@ -74,7 +76,11 @@ if __name__ == '__main__':
 
     # client = Client(api_key, api_secret,testnet=True)
 
-    # run bot with user inputs
-    bot = CryptoBot("BTCUSDT", Strategy)
-    data = bot.getdata(lookback='100')
-    print(data.head(),'\n',data.tail())
+    # mega backtest
+    strat = st.HighLow
+    strat_log = dict()
+    for symbol in ['BTCUSDT']:
+        strat_log[symbol] = dict()
+        bot = CryptoBot("BTCUSDT", strat)
+        bot.getdata(lookback='100')
+        print(bot.df.head(),'\n',bot.df.tail())
