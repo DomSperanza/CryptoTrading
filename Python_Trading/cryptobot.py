@@ -15,7 +15,7 @@ BROKERS = ['binance','ibkr']
 STOCKS = ['SPY','DIA']
 CRYPTOS = ['BNBUSDT', 'BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'DOGEUSDT']
 
-
+# https://stackoverflow.com/questions/21060073/dynamic-inheritance-in-python
 class CryptoBot:
     '''
     Activates the cryptobot to begin trading based on a given strategy.
@@ -28,13 +28,15 @@ class CryptoBot:
         The strategy to be implemented
     '''
 
+    df: pd.Dataframe = None
+    trades_df: pd.DataFrame = None
 
 
     def __init__(self, 
                 symbol: str, 
                 strategy: st.StrategyClass,
                 client: Client = Client(),
-                df: pd.DataFrame = None,
+                # df: pd.DataFrame = None,
                 broker: str = 'binance') -> None:
 
         # validity checks (currently restricting symbols)
@@ -46,8 +48,11 @@ class CryptoBot:
         self.symbol = symbol
         self.strategy = strategy
         self.client = client
-        self.df = df
+        # self.df = df
         self.broker = broker
+
+        # inherits all methods from the passed strategy
+        strategy.__init__(self)
 
         
 

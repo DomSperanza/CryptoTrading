@@ -29,7 +29,7 @@ class StrategyClass(ABC):
     #     self.applyindicators()
     #     self.hook2()
 
-    # These operations already have implementations.
+    # common operations among all strategies
     def crossabove(self, fast: pd.DataFrame, slow: pd.DataFrame) -> pd.Series:
         series = pd.Series(np.where(fast > slow, 1, 0))
         series = series.diff()
@@ -56,7 +56,7 @@ class StrategyClass(ABC):
             self.trades_df.profit_net > 0, True, False)
         return self.trades_df
 
-    # These operations have to be implemented in subclasses.
+    # methods unique to each strategy
     @abstractmethod
     def apply_indicators(self) -> pd.DataFrame:
         '''Apply the indicators of the given strategy to the dataframe'''
@@ -67,6 +67,7 @@ class StrategyClass(ABC):
         '''Apply the given strategy to the dataframe'''
         ...
 
+    # methods that may be overwritten by the strategy
     def plot_visual(self):
 
         plt.style.use('dark_background')
