@@ -5,12 +5,12 @@ import ta
 
 class HighLow(StrategyClass):
     
-    def __init__(self, df: pd.DataFrame) -> None:
+    def __init__(self, df = pd.DataFrame, trades_df = pd.DataFrame) -> None:
         self.df = df
-        self.trades_df = None
+        self.trades_df = trades_df
 
         #apply the strat to the input dataframe
-        self.apply_indicators()
+        # self.apply_indicators()
 
 
     def apply_indicators(self) -> pd.DataFrame:

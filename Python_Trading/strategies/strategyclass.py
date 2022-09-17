@@ -14,10 +14,11 @@ class StrategyClass(ABC):
     Concrete subclasses should implement these operations, but leave the
     template method itself intact.
     """
+    trades_df: pd.DataFrame
 
     @abstractmethod
-    def __init__(self, df: pd.DataFrame) -> None:
-        self.trades_df = None
+    def __init__(self) -> None:
+        # self.trades_df = None
         ...
 
     # def template_method(self) -> None:
