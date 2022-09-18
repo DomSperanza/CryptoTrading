@@ -297,6 +297,82 @@ def applyindicators(df, strat):
         df['BarColor'] = np.where(df.Close > upperk, 'Blue', np.where(
             df.Close < lowerk, 'Red', 'Gray'))
 
+
+    if strat =='Lazy_Bear': #youtube 80% winrate
+        #Rules for trade:
+            ## must be green coral trend (positive slope)
+            ## must close above (start looking)
+            ## must close below green coral trend
+            ## must close aove the green line = Buy
+            ## ADX: blue>20 and positive slope
+            ## Green line above Red Line
+            ## stoploss at recent swing low, target 1.5 times risk
+        
+        #Code up the Coral Trend indicator
+        sm = 25
+        cd = .4
+        di = (sm-1)/2+1
+        c1 = 2/(di+1)
+        c2 = 1-c1
+        c3 = 3 *(cd*cd+cd*cd*cd)
+        c4 = -3*(2*cd**2+cd+cd**3)
+        c5 = 3 *cd+1+cd**3+3*cd**2
+        i_dict = {'i1':[],'i2':[],'i3':[],'i4':[],'i5':[],'i6':[]}
+        i_dict['i1'].append(df.Close[0])
+        i_list = list(i_dict.keys())
+        #count=0
+        for i_key in range(len(i_dict)):
+            if i_key == 0:
+                for ii in range(1,len(df)):
+                    i_dict['i1'].append(c1*df.Close[ii]+c2*i_dict['i1'][ii-1])
+            else:
+                i_dict[i_list[i_key]].append(df.Close[0])
+                for ii in range(1,len(df)):
+                    i_dict[i_list[i_key]].append(c1*i_dict[i_list[i_key-1]][ii]+c2*i_dict[i_list[i_key]][ii-1])        
+        df['bfr'] = -cd**3*np.array(i_dict['i6'])+c3*np.array(i_dict['i5'])+c4*np.array(i_dict['i4'])+c5*np.array(i_dict['i3'])
+        bfrC = []
+        bfrC.append('red')
+        for jj in range(1,len(df)):
+            if df.bfr[jj]>=df.bfr[jj-1]:
+                bfrC.append('green')
+            else:
+                bfrC.append('red')
+        df['bfrC'] = bfrC
+        
+        #pull back strat with the colors and price action
+        Close_above = np.where(df.Close>df.bfr,1,0)
+        cross_bfr = pd.Series(Close_above).diff()
+        df['signal']=np.where(cross_bfr==1,1,0)
+        
+        #ADX and DI
+        length = 14
+        TR = ta.volatility.average_true_range(
+            df.High, df.Low, df.Close, window=1)
+        DMP = np.where((df.High-df.High.shift(1)) >
+                       (df.Low.shift(1)-df.Low), df.High-df.High.shift(1), 0)
+        DMP = np.where(DMP < 0, 0, DMP)
+        DMM = np.where((df.Low.shift(1)-df.Low) >
+                       (df.High-df.High.shift(1)), df.Low.shift(1)-df.Low, 0)
+        DMM = np.where(DMM < 0, 0, DMM)
+        STR = [0]*len(df)
+        SDMP = [0]*len(df)
+        SDMM = [0]*len(df)
+
+        for i in range(1, len(df)):
+            STR[i] = (STR[i-1]-STR[i-1]/length)+TR[i]
+            SDMP[i] = (SDMP[i-1]-SDMP[i-1]/length)+DMP[i]
+            SDMM[i] = (SDMM[i-1]-SDMM[i-1]/length)+DMM[i]
+        SDMP = pd.Series(SDMP, index=df.index)
+        SDMM = pd.Series(SDMM, index=df.index)
+        STR = pd.Series(STR, index=df.index)
+        DIPlus = SDMP/STR*100
+        DIMinus = SDMM/STR*100
+        DXtest = pd.Series(abs(DIPlus-DIMinus) /
+                           (DIPlus+DIMinus)*100, index=df.index)
+        df['ADX'] = ta.trend.sma_indicator(DXtest, length)
+        df['DIPlus'] = DIPlus
+        df['DIMinus'] = DIMinus
+        
     # Return  the updated dataframe.
     return df
 
@@ -458,6 +534,32 @@ def Testing_strat(df, strat):
                     sellprice.append(TP)
                     selldates.append(df.iloc[i].name)
                     in_position = False
+                    
+    if strat == 'Lazy_Bear':
+        for i in range(4, len(df)):
+            if ~(in_position) & (i+1 < len(df)):
+                if ((df.iloc[i].bfrC=='green')&
+                    (df.iloc[i].signal ==1)&
+                    (df.iloc[i].DIPlus>df.iloc[i].DIMinus)&
+                    (df.iloc[i].ADX>15)):
+
+                    buydates.append(df.iloc[i].name)
+                    buyprice.append(df.iloc[i].Close)
+                    SL = min(min(df[i-4:i].Low)*.999, df.iloc[i].Close*.995)
+                    Risk = 1-(SL/df.iloc[i].Close)
+                    TP = df.iloc[i].Close+df.iloc[i].Close*Risk*2
+                    in_position = True
+                    continue
+
+            if (in_position) & (i+1 < len(df)):
+                if (df.iloc[i].Low < SL):
+                    sellprice.append(SL)
+                    selldates.append(df.iloc[i].name)
+                    in_position = False
+                elif (df.iloc[i].High > TP):
+                    sellprice.append(TP)
+                    selldates.append(df.iloc[i].name)
+                    in_position = False                        
 
     tradesdf = GetTradesdf(buydates, buyprice, selldates, sellprice)
     return tradesdf
@@ -496,8 +598,8 @@ def trades_stats(tradesdf):
 # testing with data single symbol
 
 
-df = getdata(symbol='ETHUSDT', interval='5m', lookback='500')
-strat = 'Heiken_stoch'
+df = getdata(symbol='ETHUSDT', interval='1h', lookback='1000')
+strat = 'Lazy_Bear'
 df = applyindicators(df, strat=strat)
 tradesdf = Testing_strat(df, strat=strat)
 #Plot_visual(df, tradesdf)
@@ -506,16 +608,15 @@ stats = trades_stats(tradesdf)
 
 # %% Mega Backtest
 symbols = ['BNBUSDT', 'BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'DOGEUSDT']
-strat = 'Heiken_stoch'
+strat = 'Lazy_Bear'
 Dict_for_strat = {}
 for symbol in symbols:
     Dict_for_strat[symbol] = {}
-    df = getdata(symbol, interval='5m', lookback='500')
+    df = getdata(symbol, interval='1h', lookback='1000')
     df = applyindicators(df, strat=strat)
 
     Dict_for_strat[symbol]['tradesdf'] = Testing_strat(df, strat=strat)
-    Dict_for_strat[symbol]['stats'] = trades_stats(
-        Dict_for_strat[symbol]['tradesdf'])
+    Dict_for_strat[symbol]['stats'] = trades_stats(Dict_for_strat[symbol]['tradesdf'])
 
 
 # %% Plot all of them
