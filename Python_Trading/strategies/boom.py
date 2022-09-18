@@ -1,15 +1,25 @@
+from turtle import rt
 from .strategyclass import StrategyClass
 import pandas as pd
 import numpy as np
 import ta
 import math
+import matplotlib.pyplot as plt
 
 class Boom(StrategyClass):
     
-    def __init__(self, df: pd.DataFrame) -> None:
+    def __init__(self, df = pd.DataFrame, trades_df = pd.DataFrame) -> None:
         self.df = df
+        self.trades_df = trades_df
 
-    def applyindicators(self) -> pd.DataFrame:
+    def apply_indicators(self) -> pd.DataFrame:
+        # Hull moving average indicator
+        self.df['WMA_200'] = ta.trend.wma_indicator(self.df.Close, window=200)
+        self.df['HMA_200'] = ta.trend.wma_indicator(2*ta.trend.wma_indicator(self.df.Close, window=round(
+            400/2))-ta.trend.wma_indicator(self.df.Close, window=400), window=round(math.sqrt(400)))
+        self.df['Hull_color'] = np.where(
+            self.df.HMA_200 > self.df.HMA_200.shift(2), 'green', 'red')
+
         # boom indicator (from YouTube)
 
         # make for loop go faster by making lists instead of appending a dataframe
@@ -68,7 +78,56 @@ class Boom(StrategyClass):
         # Volatility oscillator with relation to the std
         self.df['Vol_spike'] = self.df.Close-self.df.Open
         self.df['up_stdev'] = self.df.Vol_spike.rolling(100).std()
+        return self.df
 
+    def apply_strat(self) -> pd.DataFrame:
+        in_position = False
+        buydates = []
+        buyprice = []
+        selldates = []
+        sellprice = []   
+
+        for i in range(2, len(self.df)):
+            if ~(in_position) & (i+1 < len(self.df)):
+                if ((self.df.iloc[i].Q_trigger >= self.df.iloc[i].Q2) &
+                    (self.df.iloc[i].cross_above_QT_Q2 == 1) &
+                    (self.df.iloc[i].Close > self.df.iloc[i].HMA_200) &
+                    (self.df.iloc[i].Hull_color == 'green') &
+                        (max(self.df[i-1:i].Vol_spike) > self.df.iloc[i].up_stdev)):
+                    buydates.append(self.df.iloc[i].name)
+                    buyprice.append(self.df.iloc[i].Close)
+                    SL = min(self.df[i-30:i].Low)*.998
+                    Risk = 1-(SL/self.df.iloc[i].Close)
+                    TP = self.df.iloc[i].Close+self.df.iloc[i].Close*Risk*2
+                    #TSL = SL
+
+                    in_position = True
+                    continue
+
+            if (in_position) & (i+1 < len(self.df)):
+                if (self.df.iloc[i].Low < SL):
+                    sellprice.append(SL)
+                    selldates.append(self.df.iloc[i].name)
+                    in_position = False
+                elif (self.df.iloc[i].High > TP):
+                    sellprice.append(TP)
+                    selldates.append(self.df.iloc[i].name)
+                    in_position = False
+        trades_df = self.get_trades_df(buydates, buyprice, selldates, sellprice)
+        return trades_df
+
+    def plot_visual(self):
+        plt.style.use('dark_background')
+        plt.figure(figsize=(20, 10))
+        plt.title(self.symbol)
+        plt.plot(self.df[['WMA_200']])
+        plt.scatter(self.trades_df.buydates, self.trades_df.buyprices,
+                    marker='^', color='g', s=200)
+        plt.scatter(self.trades_df.selldates, self.trades_df.sellprices,
+                    marker='v', color='r', s=200)
+        plt.grid()
+        plt.show()
 
 if __name__ == '__main__':
-    strat  = Boom()
+    pass
+    # strat  = Boom()

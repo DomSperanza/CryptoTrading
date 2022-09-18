@@ -10,8 +10,9 @@ class Binance(BrokerClass):
     '''
 
     def __init__(self, 
+                symbol: str,
                 client: Client = Client()):
-        BrokerClass.__init__
+        self.symbol = symbol
         self.client = client
 
     def get_data(self, interval: str ='1m', lookback: str ='400') -> pd.DataFrame:

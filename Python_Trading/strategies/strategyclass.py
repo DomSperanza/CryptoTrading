@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 import numpy as np
 import pandas as pd
 import ta
-import matplotlib.pyplot as plt
 
 
 class StrategyClass(ABC):
@@ -18,17 +17,7 @@ class StrategyClass(ABC):
 
     @abstractmethod
     def __init__(self) -> None:
-        # self.trades_df = None
         ...
-
-    # def template_method(self) -> None:
-    #     """
-    #     The template method defines the skeleton of an algorithm.
-    #     """
-    #     self.crossabove()
-    #     self.crossbelow()
-    #     self.applyindicators()
-    #     self.hook2()
 
     # common operations among all strategies
     def crossabove(self, fast: pd.DataFrame, slow: pd.DataFrame) -> pd.Series:
@@ -69,29 +58,20 @@ class StrategyClass(ABC):
         ...
 
     # methods that may be overwritten by the strategy
+    @abstractmethod
     def plot_visual(self):
-
-        plt.style.use('dark_background')
-        plt.figure(figsize=(20, 10))
-        plt.title(self.symbol)
-        plt.plot(self.df[['SMA_50']])
-        plt.scatter(self.tradesdf.buydates, self.tradesdf.buyprices,
-                    marker='^', color='g', s=200)
-        plt.scatter(self.tradesdf.selldates, self.tradesdf.sellprices,
-                    marker='v', color='r', s=200)
-        plt.grid()
-        plt.show()
+        ...
 
     def buy_and_hold(self):
         buy = self.df.Close[1]
         sell =self.df.Close[-1]
-        profit = ((sell-buy)/buy-0.0015)+1
-        return profit
+        self.profit = ((sell-buy)/buy-0.0015)+1
+        return self.profit
 
     def trades_stats(self):
         statsdict = {}
-        statsdict['profit_no_fee'] = (self.tradesdf.profit_rel+1).prod()
-        statsdict['profit_fee'] = (self.tradesdf.profit_net+1).prod()
-        statsdict['winrate'] = self.tradesdf.profit_bool.sum()/len(self.tradesdf)
-        statsdict['buyhold'] = self.buy_and_hold(self.df)
+        statsdict['profit_no_fee'] = (self.trades_df.profit_rel+1).prod()
+        statsdict['profit_fee'] = (self.trades_df.profit_net+1).prod()
+        statsdict['winrate'] = self.trades_df.profit_bool.sum()/len(self.trades_df)
+        statsdict['buyhold'] = self.buy_and_hold()
         return statsdict

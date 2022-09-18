@@ -3,12 +3,8 @@ import pandas as pd
 
 class BrokerClass(ABC):
 
-    # @abstractmethod
-    # def __init__(self):
-    #     ...
-
     @abstractmethod
-    def get_data(self) -> pd.DataFrame:
+    def get_data(self, interval, lookback) -> pd.DataFrame:
         ...
 
     @abstractmethod
