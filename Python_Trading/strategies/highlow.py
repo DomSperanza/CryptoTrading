@@ -11,8 +11,9 @@ class HighLow(StrategyClass):
         self.trades_df = trades_df
 
     def apply_indicators(self) -> pd.DataFrame:
-        # SMAs
+        # SMAs, also for plot purposes
         self.df['SMA_50'] = ta.trend.sma_indicator(self.df.Close, window=50)
+        
         # rolling high low mid
         self.df['rollhigh'] = self.df.High.rolling(15).max()
         self.df['rolllow'] = self.df.Low.rolling(15).min()
@@ -52,18 +53,7 @@ class HighLow(StrategyClass):
 
         self.trades_df = self.get_trades_df(buydates, buyprice, selldates, sellprice)
         return self.trades_df
-
-    def plot_visual(self):
-        plt.style.use('dark_background')
-        plt.figure(figsize=(20, 10))
-        plt.title(self.symbol)
-        plt.plot(self.df[['SMA_50']])
-        plt.scatter(self.trades_df.buydates, self.trades_df.buyprices,
-                    marker='^', color='g', s=200)
-        plt.scatter(self.trades_df.selldates, self.trades_df.sellprices,
-                    marker='v', color='r', s=200)
-        plt.grid()
-        plt.show()
+        
 
 if __name__ == '__main__':
     pass

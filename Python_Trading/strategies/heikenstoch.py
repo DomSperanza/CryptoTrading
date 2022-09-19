@@ -70,3 +70,7 @@ class HeikenStoch(StrategyClass):
 
         trades_df = get_trades_df(buydates, buyprice, selldates, sellprice)
         return trades_df        
+
+
+if __name__ == '__main__':
+    pass
