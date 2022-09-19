@@ -58,9 +58,17 @@ class StrategyClass(ABC):
         ...
 
     # methods that may be overwritten by the strategy
-    @abstractmethod
     def plot_visual(self):
-        ...
+        plt.style.use('dark_background')
+        plt.figure(figsize=(20, 10))
+        plt.title(self.symbol)
+        plt.plot(self.df[['SMA_50']])
+        plt.scatter(self.trades_df.buydates, self.trades_df.buyprices,
+                    marker='^', color='g', s=200)
+        plt.scatter(self.trades_df.selldates, self.trades_df.sellprices,
+                    marker='v', color='r', s=200)
+        plt.grid()
+        plt.show()
 
     def buy_and_hold(self):
         buy = self.df.Close[1]
