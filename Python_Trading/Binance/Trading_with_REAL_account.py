@@ -5,32 +5,34 @@ Created on Sun Jun 19 18:24:06 2022
 @author: dvspe
 """
 
-import pandas as pd
+
 import os
+# should work ony any computer
+path, filename = os.path.split(os.path.realpath(__file__))
+# should got to Python_Trading AKA one directory up from current file's directory
+os.chdir(path+"\..")
+
+import Functions.Binance_Functions_v2 as func
+import pandas as pd
 from binance.client import Client
 import time
 import matplotlib.pyplot as plt
-from sqlalchemy import create_engine
+from dotenv import load_dotenv
 
+#%% Load in env variables for code to work
 
+# new format
+load_dotenv()
 
-#change the directory to the correct one so that all the code refereces the correct spot
-#This will only work on this computer
-os.chdir(r'C:\Users\dvspe\Desktop\Python_Trading')
+# env constant names
+key_var = 'BINANCE_API'
+secret_var = 'BINANCE_SECRET'
 
-#import user functions
-import Functions.Binance_Functions_v2 as func
-
-#%% Connects to the Database Engine
-#engine = create_engine('sqlite:///Binance/SQL_Engine/Live_Crypto_Data.db')
-#df_TSL = pd.read_sql('ETHUSDT',engine)
+# assign desired API keys
+API_key = os.getenv(key_var)
+Secret_key = os.getenv(secret_var)
 
 #%%
-#get the binance api keys to log onto the network and start pulling data
-key = pd.read_csv('./Binance_Keys/binance_api_keys.txt')
-key = key.set_index('Type')
-API_key = key.loc['API_key'].values[0]
-Secret_key = key.loc['Secret_key'].values[0]
 
 #set up the client for binance
 client = Client(api_key =  API_key,api_secret = Secret_key,tld = 'us')
@@ -38,7 +40,7 @@ client = Client(api_key =  API_key,api_secret = Secret_key,tld = 'us')
 print(client.get_account())
 account_df = client.get_account()
 account_df = pd.DataFrame(account_df['balances'])
-account_df = account_df[account_df['asset'].isin(['BTC','ETH','BNB','SOL','ADA','USDT','USD'])]
+account_df = account_df[account_df['asset'].isin(['USDT','BTC','ETH','BNB','SOL','ADA','USD'])]
 
 Starting_Amount = float(account_df[account_df.asset == 'USDT']['free'].values[0])
 
@@ -50,14 +52,14 @@ tradesdf['quantity']= 0
 order = None
 
 
-#%% Set Trading Stratgy
+#%% Set Trading Stratgy to be traded with
 strategy ='chan'
 
 #%% Get the oringial indicators_dictionaries.
 indicators_dict = {}
 for symbol in tradesdf.symbol:
     indicators_dict[symbol] = pd.DataFrame()        
-    indicators_dict[symbol] = func.getminutedata(symbol, '5m', '10000', client)
+    indicators_dict[symbol] = func.getminutedata(symbol, '5m', '1000', client)
     indicators_dict[symbol]  = func.applyindicators(indicators_dict[symbol] )
     indicators_dict[symbol]  = func.conditions(indicators_dict[symbol] ,strategy)
 

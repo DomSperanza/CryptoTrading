@@ -39,17 +39,21 @@ def getminutedata(symbol,interval, lookback,client):
     frame = pd.DataFrame(client.get_historical_klines(symbol,
                                                       interval,
                                                       lookback +' min ago UTC'))
-    frame = frame.iloc[:,0:5]
-    frame.columns = ['Time','Open','High','Low','Close']
+    frame = frame.iloc[:,0:6]
+    frame.columns = ['Time','Open','High','Low','Close','Volume']
     frame.set_index('Time',inplace = True)
     frame.index = pd.to_datetime(frame.index,unit = 'ms')
     frame = frame.astype(float)
-    z_scores = zscore(frame)
-    abs_z_scores = np.abs(z_scores)
-    filtered_entries = (abs_z_scores < 4).all(axis=1)
-    frame = frame[filtered_entries]
+    #This was to filter out outliers in the data. Mainly used for the fake account cause
+    #some of the values were BS
+    
+    #z_scores = zscore(frame)
+    # abs_z_scores = np.abs(z_scores)
+    # filtered_entries = (abs_z_scores < 4).all(axis=1)
+    # frame = frame[filtered_entries]
     return frame      
 
+#Need to update this to the new version I have on my backtesting stuff. 
 def applyindicators(df):
     slope_lookback = 5
     
@@ -126,6 +130,7 @@ def applyindicators(df):
     
     return(df)
 
+#need to update based on what i have in backtesting
 def conditions(df_indicators, strategy = 'basic'):
     if strategy == 'basic':
         df_indicators['Buy'] = np.where(((df_indicators.Close<df_indicators.Lower_20_std*1)&
@@ -188,6 +193,9 @@ def conditions(df_indicators, strategy = 'basic'):
 
 #%%
 #pull client data for trailing stop loss. 
+#Use this to do a trailing stoploss
+#Right now it is set up at a 1% trailing stop loss always. 
+#
 def tsl(symbol,client,df = pd.DataFrame()):
     if len(df)==0:
         df = pd.DataFrame(client.get_ticker(symbol = symbol),index = [0])
@@ -208,7 +216,6 @@ def tsl(symbol,client,df = pd.DataFrame()):
         
         
 #%% MAKES SURE ORDER IS NOT GOING TO PRODUCE AN ERROR   
-
 
 #Function to get the limit order price that is properly rounded. 
 def pricecalc(symbol,client, limit = .99975):
@@ -231,6 +238,7 @@ def quantitycalc(symbol, investment,client):
     price = pricecalc(symbol,client)
     qty = round(investment/price,right_rounding(Lotsize))
     return qty
+
 
 #%% MAKES AN ORDER
 #making a by limit order
@@ -257,6 +265,8 @@ def sell(symbol,client,tradesdf):
 
 
 #%% BUILD A TRADER FUNCTION TO IMPLEMENT THE STRATEGY.
+#This portion needs to be updated. 
+
 def trader(investment,client,tradesdf,tsl_dicts,strategy = 'basic',order = None):
     indicators_dict ={}
     for symbol in tradesdf.symbol:
@@ -317,6 +327,7 @@ def Get_trades_df_real_account(symbol,client):
 
 
 #%% Plot all the symbols
+#needs to have some baseline subset of columns always so it is easier to plot
 def Plot_all_symbols(indicators_dict,symbols):
     for symbol in symbols:
         plt.plot(indicators_dict[symbol][['Close','SMA_13','SMA_MAX','Upper_20_std','Lower_20_std']])
