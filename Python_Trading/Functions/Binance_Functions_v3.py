@@ -1,63 +1,71 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue Jul 26 13:21:41 2022
-
-@author: dvspe
-"""
-
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Jun 24 18:28:11 2022
+Created on Sun Jun 19 14:50:30 2022
 
 @author: dvspe
 Purpose:
-    Make an easily editable backtesting script that will allow me to see the effectiveness
-    of trading strategies before implementing them. All functions and variables 
-    can live in this script and binance functions can be ported over
+    Keep all of the Binance functions accessable for creating scripts
+    Tidy up the functions that i have already written and add in other indicators
     
-    Going to be using methods similar to Algovibes from youtube to backtest
     
-Packages needed: ta, python-binance, pandas, numpy, etc
+Packages:
+    binance-client, pandas, os
 """
 
-# %% Import Packages needed
-
-# should work ony any computer
-import ta
+#%%IMPORT ALL PACKAGES REQUIRED FOR FUNCTIONS
 import pandas as pd
+from binance import Client
+import ta
 import numpy as np
-import os
-from binance.client import Client
 from scipy.stats import zscore
+import sqlalchemy
+from binance import ThreadedWebsocketManager
+import time
 import matplotlib.pyplot as plt
+from datetime import datetime,timezone,timedelta
 from finta import TA as ta2
 import math
-path, filename = os.path.split(os.path.realpath(__file__))
-# should got to Python_Trading AKA one directory up from current file's directory
-os.chdir(path+"\..")
 
-# set up the correct dirrectory
-# os.chdir(r'C:\Users\dvspe\Desktop\Python_Trading')
+#%% Getting data from API 
 
 
-# %% Set up the Client from binance to get the data. No key needed
-client = Client()
-
-
-# %% Keep all functions here  with labels as to what they do.
-def getdata(symbol, interval='1m', lookback='400', client=client):
+def getrangedata(symbol,interval,start, end, client):
     frame = pd.DataFrame(client.get_historical_klines(symbol,
                                                       interval,
-                                                      lookback + ' hours ago UTC'))
-    frame = frame.iloc[:, 0:6]
-    frame.columns = ['Time', 'Open', 'High', 'Low', 'Close', 'Volume']
-    frame.set_index('Time', inplace=True)
-    frame.index = pd.to_datetime(frame.index, unit='ms')
+                                                      start_str = start,
+                                                      end_str = end))
+    
+    frame = frame.iloc[:,0:5]
+    frame.columns = ['Time','Open','High','Low','Close']
+    frame.set_index('Time',inplace = True)
+    frame.index = pd.to_datetime(frame.index,unit = 'ms')
     frame = frame.astype(float)
+
     return frame
 
-# Checks to see if there is a crossover of the signal line
 
+def getminutedata(symbol,interval, lookback,client):
+    frame = pd.DataFrame(client.get_historical_klines(symbol,
+                                                      interval,
+                                                      lookback +' min ago UTC'))
+    
+
+    frame = frame.iloc[:,0:6]
+    frame.columns = ['Time','Open','High','Low','Close','Volume']
+    frame.set_index('Time',inplace = True)
+    frame.index = pd.to_datetime(frame.index,unit = 'ms')
+    frame = frame.astype(float)
+    #This was to filter out outliers in the data. Mainly used for the fake account cause
+    #some of the values were BS
+    
+    #z_scores = zscore(frame)
+    # abs_z_scores = np.abs(z_scores)
+    # filtered_entries = (abs_z_scores < 4).all(axis=1)
+    # frame = frame[filtered_entries]
+    
+    return frame      
+
+#%% Functions for adding stuff to the indicators DF
 
 def crossabove(fast, slow):
     series = pd.Series(np.where(fast > slow, 1, 0))
@@ -73,11 +81,10 @@ def crossbelow(fast, slow):
     return series
 
 
-# define all the indicators needed for the strat testing
 def applyindicators(df, strat):
     # for plot purposes
     df['SMA_50'] = ta.trend.sma_indicator(df.Close, window=50)
-
+    
     if strat == 'High_Low':
         # SMAs
         df['SMA_50'] = ta.trend.sma_indicator(df.Close, window=50)
@@ -297,8 +304,8 @@ def applyindicators(df, strat):
         df['BarColor'] = np.where(df.Close > upperk, 'Blue', np.where(
             df.Close < lowerk, 'Red', 'Gray'))
 
-
-    if strat =='Lazy_Bear': #youtube 80% winrate
+    #youtube 80% winrate. 1 hr candlesticks. only on ETHUSDT
+    if strat =='Lazy_Bear': 
         #Rules for trade:
             ## must be green coral trend (positive slope)
             ## must close above (start looking)
@@ -375,249 +382,255 @@ def applyindicators(df, strat):
         
     # Return  the updated dataframe.
     return df
-
-
-def GetTradesdf(buydates, buyprice, selldates, sellprice):
-    tradesdf = pd.DataFrame([buydates, selldates, buyprice, sellprice]).T
-    tradesdf.columns = ['buydates', 'selldates', 'buyprices', 'sellprices']
-    tradesdf.dropna(inplace=True)
-    tradesdf['profit_rel'] = (tradesdf.sellprices -
-                              tradesdf.buyprices)/tradesdf.buyprices
-    tradesdf['cummulative_profit'] = (tradesdf.profit_rel+1).cumprod()
-    tradesdf['profit_net'] = tradesdf.profit_rel - 0.0015
-    tradesdf['cummulative_profit_fee'] = (tradesdf.profit_net+1).cumprod()
-    tradesdf['profit_bool'] = np.where(tradesdf.profit_rel > 0, True, False)
-    tradesdf['profit_bool_fee'] = np.where(
-        tradesdf.profit_net > 0, True, False)
-    return tradesdf
-
-
-# define the strategies to get the buy and sell dates and times
-def Testing_strat(df, strat):
-    in_position = False
-    buydates = []
-    buyprice = []
-    selldates = []
-    sellprice = []
-
-    # strats go here. Edit for different rules of trading ie adding a stop loss
-    # or profit margin. Check if market is trending upwards from the indicators
-    # make sure your df has all the indicators needed for the strats.
-    # to edit, add the indicators nessasary above, then add strat here.
-    if strat == 'High_Low':
-        for i in range(len(df)):
-            if ~(in_position) & (i+1 < len(df)):
-                if ((df.iloc[i].midcross) &
-                        (df.iloc[i].Close > df.iloc[i].SMA_50)):
-                    buydates.append(df.iloc[i].name)
-                    buyprice.append(df.iloc[i].Close)
-                    TP = df.iloc[i].Close*1.02
-                    SL = df.iloc[i].Close*.99
-                    in_position = True
-                    continue
-
-            if (in_position) & (i+1 < len(df)):
-                if (df.iloc[i].Low < SL):
-                    sellprice.append(SL)
-                    selldates.append(df.iloc[i].name)
-                    in_position = False
-                elif (df.iloc[i].High > TP):
-                    sellprice.append(TP)
-                    selldates.append(df.iloc[i].name)
-                    in_position = False
-
-    if strat == 'Boom':
-        for i in range(2, len(df)):
-            if ~(in_position) & (i+1 < len(df)):
-                if ((df.iloc[i].Q_trigger >= df.iloc[i].Q2) &
-                    (df.iloc[i].cross_above_QT_Q2 == 1) &
-                    (df.iloc[i].Close > df.iloc[i].HMA_200) &
-                    (df.iloc[i].Hull_color == 'green') &
-                    (max(df[i-1:i].Vol_spike) > df.iloc[i].up_stdev)):
-                    buydates.append(df.iloc[i].name)
-                    buyprice.append(df.iloc[i].Close)
-                    SL = min(df[i-30:i].Low)*.998
-                    Risk = 1-(SL/df.iloc[i].Close)
-                    TP = df.iloc[i].Close+df.iloc[i].Close*Risk*2
-                    #TSL = SL
-
-                    in_position = True
-                    continue
-
-            if (in_position) & (i+1 < len(df)):
-                if (df.iloc[i].Low < SL):
-                    sellprice.append(SL)
-                    selldates.append(df.iloc[i].name)
-                    in_position = False
-                elif (df.iloc[i].High > TP):
-                    sellprice.append(TP)
-                    selldates.append(df.iloc[i].name)
-                    in_position = False
-
-    if strat == 'Heiken_stoch':
-        for i in range(2, len(df)):
-            if ~(in_position) & (i+1 < len(df)):
-                if ((df.iloc[i].rsi_crossover == 1) &
-                    ((df.iloc[i].stoch_k <= .2) |
-                     (df.iloc[i].stoch_d <= .2)) &
-                    (df.iloc[i].CloseH-df.iloc[i].OpenH > df.iloc[i-1].CloseH-df.iloc[i-1].OpenH) &
-                    (df.iloc[i].CloseH > df.iloc[i].OpenH) &
-                    (df.iloc[i-1].CloseH > df.iloc[i-1].OpenH) &
-                        (df.iloc[i].CloseH >= df.iloc[i].EMA_200)):
-
-                    buydates.append(df.iloc[i].name)
-                    buyprice.append(df.iloc[i].Close)
-                    SL = min(min(df[i-5:i].Low), df.iloc[i].Close*.995)
-                    Risk = 1-(SL/df.iloc[i].Close)
-                    TP = df.iloc[i].Close+df.iloc[i].Close*Risk*1.5
-
-                    in_position = True
-                    continue
-
-            if (in_position) & (i+1 < len(df)):
-                if (df.iloc[i].Low < SL):
-                    sellprice.append(SL)
-                    selldates.append(df.iloc[i].name)
-                    in_position = False
-                elif (df.iloc[i].High > TP):
-                    sellprice.append(TP)
-                    selldates.append(df.iloc[i].name)
-                    in_position = False
-
+    
+    
+#NEED TO ADD OTHER STRATEGIES TRADING RULES
+def buy_sell_conditions(df,strat):
+    if strat =='High_Low':
+        #Buy based on the conditition
+        df['Buy'] = np.where(((df.midcross==1)&
+                              (df.Close>df.SMA_50)),1,0)
+        
+        #Column of 0's means we are only using TSL, SL, and TP for money management
+        df['Sell'] = 0
+        
+    if strat =='Boom':
+        df['Buy'] = np.where(((df.Q_trigger >= df.Q2) &
+                              (df.cross_above_QT_Q2 == 1) &
+                              (df.Close > df.HMA_200) &
+                              (df.Hull_color == 'green') &
+                              ((df.Vol_spike > df.up_stdev)|
+                               (df.Vol_spike.shift(1)>df.up_stdev))),1,0)
+        df['Sell'] = 0
+        
     if strat == 'Heiken_ema':
-        for i in range(1, len(df)):
-            if ~(in_position) & (i+1 < len(df)):
-                if (df.iloc[i].good_buy == 1):
-
-                    buydates.append(df.iloc[i].name)
-                    buyprice.append(df.iloc[i].Close)
-                    SL = min(df.iloc[i-1].Low, df.iloc[i].Close*.998)
-                    Risk = 1-(SL/df.iloc[i].Close)
-                    TP = df.iloc[i].Close+df.iloc[i].Close*Risk*2
-
-                    in_position = True
-                    continue
-
-            if (in_position) & (i+1 < len(df)):
-                if (df.iloc[i].Low < SL):
-                    sellprice.append(SL)
-                    selldates.append(df.iloc[i].name)
-                    in_position = False
-                elif (df.iloc[i].High > TP):
-                    sellprice.append(TP)
-                    selldates.append(df.iloc[i].name)
-                    in_position = False
-
+        df['Buy'] = np.where(((df.good_buy == 1)),1,0)
+        df['Sell'] = 0
+        
     if strat == 'Magic':
-        for i in range(200, len(df)):
-            if ~(in_position) & (i+1 < len(df)):
-                if (((df.iloc[i].BarColor == 'Blue') | (df.iloc[i].BarColor == 'Gray')) &
-                    (df.iloc[i].ADX >= 20) &
-                    (df.iloc[i].MACD_cross == 1) &
-                        ((df.iloc[i].MACD > 0) | (df.iloc[i].MACD_sig > 0))):
-
-                    buydates.append(df.iloc[i].name)
-                    buyprice.append(df.iloc[i].Close)
-                    SL = min(min(df[i-10:i].Low), df.iloc[i].Close*.9975)
-                    Risk = 1-(SL/df.iloc[i].Close)
-                    TP = df.iloc[i].Close+df.iloc[i].Close*Risk*2
-
-                    in_position = True
-                    continue
-
-            if (in_position) & (i+1 < len(df)):
-                if (df.iloc[i].Low < SL):
-                    sellprice.append(SL)
-                    selldates.append(df.iloc[i].name)
-                    in_position = False
-                elif (df.iloc[i].High > TP):
-                    sellprice.append(TP)
-                    selldates.append(df.iloc[i].name)
-                    in_position = False
-                    
+        df['Buy'] = np.where((((df.BarColor == 'Blue') | (df.BarColor == 'Gray')) &
+                              (df.ADX >= 20) &
+                              (df.MACD_cross == 1) &
+                              ((df.MACD > 0) | (df.MACD_sig > 0))),1,0)
+        df['Sell'] = 0
+    
     if strat == 'Lazy_Bear':
-        for i in range(4, len(df)):
-            if ~(in_position) & (i+1 < len(df)):
-                if ((df.iloc[i].bfrC=='green')&
-                    (df.iloc[i].signal ==1)&
-                    (df.iloc[i].DIPlus>df.iloc[i].DIMinus)&
-                    (df.iloc[i].ADX>15)):
+        df['Buy'] = np.where(((df.bfrC=='green')&
+                              (df.signal ==1)&
+                              (df.DIPlus>df.DIMinus)&
+                              (df.ADX>15)),1,0)
+        df['Sell'] = 0
+        
+    return df
 
-                    buydates.append(df.iloc[i].name)
-                    buyprice.append(df.iloc[i].Close)
-                    SL = min(min(df[i-5:i].Low)*.999, df.iloc[i].Close*.995)
-                    Risk = 1-(SL/df.iloc[i].Close)
-                    TP = df.iloc[i].Close+df.iloc[i].Close*Risk*2
-                    in_position = True
-                    continue
 
-            if (in_position) & (i+1 < len(df)):
-                if (df.iloc[i].Low < SL):
-                    sellprice.append(SL)
-                    selldates.append(df.iloc[i].name)
-                    in_position = False
-                elif (df.iloc[i].High > TP):
-                    sellprice.append(TP)
-                    selldates.append(df.iloc[i].name)
-                    in_position = False                        
 
-    tradesdf = GetTradesdf(buydates, buyprice, selldates, sellprice)
+
+#%% Stoploss, trailing stop loss, and take profit targets based on stoploss. 
+#pull client data for trailing stop loss. 
+#Use this to do a trailing stoploss
+#Right now it is set up at a 1% trailing stop loss always. 
+#
+def tsl(symbol,client,df = pd.DataFrame(),percent = .99):
+    if len(df)==0:
+        df = pd.DataFrame(client.get_ticker(symbol = symbol),index = [0])
+        df = df[['closeTime','lastPrice']]
+        df.closeTime = pd.to_datetime(df.closeTime,unit = 'ms')
+        df['lastPrice'] = float(df['lastPrice'])
+        df['Benchmark'] = df['lastPrice'].cummax()
+        df['TSL'] = df['Benchmark']*percent
+    else:
+        df2 = pd.DataFrame(client.get_ticker(symbol = symbol),index = [0])
+        df2 = df2[['closeTime','lastPrice']]
+        df2.closeTime = pd.to_datetime(df2.closeTime,unit = 'ms')
+        df2['lastPrice'] = float(df2['lastPrice'])
+        df = pd.concat([df,df2])
+        df['Benchmark'] = df['lastPrice'].cummax()
+        df['TSL'] = df['Benchmark']*percent
+    return df
+        
+def recent_swing_sl(symbol,client,interval = '5m',candels = 10, min_risk = .005):
+    order = client.get_my_trades(symbol = symbol)[-1]
+    end = order['time']
+    start = end-int(interval[:-1])*candels*1000*60
+    #start = end-timedelta(minutes = interval*candels)
+    df = getrangedata(symbol, interval, start, end, client)
+    SL = min(min(df.Low), df.Close[-1]*(1-min_risk))
+    return SL 
+
+def take_profit(SL,symbol,client,target = 2):
+    order = client.get_my_trades(symbol = symbol)[-1]
+    buy_price= float(order['price'])
+    risk = 1-(SL/buy_price)
+    TP = buy_price+buy_price*risk*target
+    return TP
+
+
+#%% MAKES SURE ORDER IS NOT GOING TO PRODUCE AN ERROR   
+#Function to get the limit order price that is properly rounded. 
+def pricecalc(symbol,client, limit = .99975):
+    raw_price = float(client.get_symbol_ticker(symbol = symbol)['price'])
+    dec_len = len(str(raw_price).split('.')[1])
+    price = raw_price*limit
+    return round(price,dec_len)
+
+def right_rounding(Lotsize):
+    split = str(Lotsize).split('.')
+    if float(split[0])==1:
+        return 0
+    else:
+        return len(split[1])
+    
+def quantitycalc(symbol, investment,client):
+    info = client.get_symbol_info(symbol = symbol)
+    Lotsize = float([i for i in info['filters'] if i['filterType']=='LOT_SIZE'][0]['minQty'])
+    Lotsize = np.format_float_positional(Lotsize)
+    price = pricecalc(symbol,client)
+    qty = round(investment/price,right_rounding(Lotsize))
+    return qty
+
+
+#%% MAKES AN ORDER AND UPDATES TRADES DF
+
+
+#changing position
+def changepos(symbol,order,tradesdf):
+    if order['side']=='BUY':
+        tradesdf.loc[tradesdf['symbol']==symbol,'open_trade']=True
+        tradesdf.loc[tradesdf['symbol']==symbol,'quantity']=float(order['origQty'])
+    else:
+        tradesdf.loc[tradesdf['symbol']==symbol,'open_trade']=False
+        tradesdf.loc[tradesdf['symbol']==symbol,'quantity']=0
     return tradesdf
+        
+#making a by limit order
+def buy(symbol,investment,client,tradesdf):
+    order = client.order_limit_buy(
+        symbol = symbol,
+        price = pricecalc(symbol,client),
+        quantity = quantitycalc(symbol,investment,client))
+    new_tradesdf = changepos(symbol, order, tradesdf)
+    print(order)
+    return order, new_tradesdf
+
+#making a market sell
+def sell(symbol,client,tradesdf):
+    order = client.create_order(
+        symbol = symbol,
+        side = "SELL",
+        type = 'MARKET',
+        quantity = tradesdf[tradesdf['symbol']==symbol]['quantity'].values[0])
+    new_tradesdf = changepos(symbol,order,tradesdf)
+    print(order)
+    return order, new_tradesdf
 
 
-def Plot_visual(df, tradesdf, symbol='Coin Title'):
 
-    plt.style.use('dark_background')
-    plt.figure(figsize=(20, 10))
-    plt.title(symbol)
-    plt.plot(df[['SMA_50']])
-    plt.scatter(tradesdf.buydates, tradesdf.buyprices,
-                marker='^', color='g', s=200)
-    plt.scatter(tradesdf.selldates, tradesdf.sellprices,
-                marker='v', color='r', s=200)
-    plt.grid()
-    plt.show()
+#%% BUILD A TRADER FUNCTION TO IMPLEMENT THE STRATEGY.
+#This portion needs to be updated. 
 
 
-def Buy_and_Hold(df):
-    buy = df.Close[1]
-    sell = df.Close[-1]
-    profit = ((sell-buy)/buy-0.0015)+1
-    return profit
 
 
-def trades_stats(tradesdf):
-    statsdict = {}
-    statsdict['profit_no_fee'] = (tradesdf.profit_rel+1).prod()
-    statsdict['profit_fee'] = (tradesdf.profit_net+1).prod()
-    statsdict['winrate'] = tradesdf.profit_bool.sum()/len(tradesdf)
-    statsdict['buyhold'] = Buy_and_Hold(df)
-    return statsdict
+def trader(investment,client,tradesdf,tsl_dicts, sl_dicts ,strategy = 'High_Low',order = None,TSL = False,TP = True, recent_swing = True,interval = '5m'):
+    #INITIALIZE THE DICTIONARY AND MAKE A DATAFRAME IN EACH PART OF THE DICT
+    indicators_dict ={}
+    for symbol in tradesdf.symbol:
+        indicators_dict[symbol] = pd.DataFrame()
+        
+        
+    #IF YOU ARE IN A POSITION, CHECK TO SEE IF YOU SHOULD EXIT THE POSITION
+    #baseline money management should be SL at recent swing low or hitting the take profit target based on risk
+    for symbol in tradesdf[tradesdf.open_trade == True].symbol:  
+        
+        #Get the data, apply the indicators, and get buy/sell signals
+        indicators_dict[symbol] =  getminutedata(symbol, interval, '2000', client)
+        indicators_dict[symbol]  = applyindicators(indicators_dict[symbol],strat = strategy)
+        indicators_dict[symbol]  = buy_sell_conditions(indicators_dict[symbol] ,strategy)
+        
+        #update the trailing stop loss
+        tsl_dicts[symbol] = tsl(symbol, client,df = tsl_dicts[symbol])
+        TSL_Sell = True in (tsl_dicts[symbol]['lastPrice']<tsl_dicts[symbol]['TSL']).values
+        
+        #Pull the last row of the data
+        lastrow = indicators_dict[symbol].tail(1)
+        
+        #get the Target profit and stoploss
+        stop_loss = recent_swing_sl(symbol,client,interval)
+        target_profit = take_profit(stop_loss, symbol, client)
+        
+        
 
-# %%
-# testing with data single symbol
+        if ((((TP == True) & (lastrow['Close'].values[0]>target_profit)) | \
+            ((TSL==True)&(TSL_Sell == True)) | \
+            ((TSL==False)&(lastrow['Close'].values[0]<stop_loss)))\
+            and not client.get_open_orders(symbol = symbol)):
+                
+            sell_order, tradesdf = sell(symbol,client,tradesdf)
+            tsl_dicts[symbol] = pd.DataFrame()
+        else:
+            sell_order = order
+    
+    #IF NOT A POSITION, CHECK TO SEE IF YOU SHOULD ENTER A POSITION
+    for symbol in tradesdf[tradesdf.open_trade == False].symbol:
+        indicators_dict[symbol] = getminutedata(symbol, interval, '2000', client)
+        indicators_dict[symbol]  = applyindicators(indicators_dict[symbol],strat = strategy)
+        indicators_dict[symbol]  = buy_sell_conditions(indicators_dict[symbol] ,strategy)
+        #get the last row that has a full candelstick ie dont make decisions on incomplete candelsticks
+        lastcompleterow = indicators_dict[symbol].iloc[-2]
+        print(symbol, lastcompleterow.Close)
+        if (lastcompleterow.Buy==1)&(lastcompleterow.Sell==0):
+            buy_order, tradesdf= buy(symbol,investment,client,tradesdf)
+            
+        else:
+            buy_order = None
+    return tradesdf, tsl_dicts, indicators_dict, stop_loss
+        
+            
+            
+    
+    
+#%% Get my current trades i have made so i can find my profit margins
+#Get a data frame with all information for buy and sell for my account
+def Get_trades_df_fake_account(symbol,client):
+    df = pd.DataFrame(client.get_my_trades(symbol = symbol))
+    df['time'] = pd.to_datetime(df['time'],unit = 'ms')
+    df['time_local'] = df['time']-pd.Timedelta(hours = 6)
+    df['quoteQty'] = df['quoteQty'].astype(float)
+    df2 = df.groupby(['orderId','time','time_local','commissionAsset','isBuyer','price'])['quoteQty'].sum().to_frame('Total_trade').reset_index()
+    df2['Price_delta'] = np.where(df2['isBuyer']==True,-1.00075,.99925)*df2['Total_trade']
+    df2['cumsum'] = df2['Price_delta'].cumsum()
+    return df2
+
+def Get_trades_df_real_account(symbol,client):
+    df = pd.DataFrame(client.get_my_trades(symbol = symbol))
+    df['time'] = pd.to_datetime(df['time'],unit = 'ms')
+    df['time_local'] = df['time']-pd.Timedelta(hours = 6)
+    df['quoteQty'] = df['quoteQty'].astype(float)
+    df2 = df.groupby(['orderId','time','time_local','commissionAsset','isBuyer','price'])['quoteQty'].sum().to_frame('Total_trade').reset_index()
+    df2['Price_delta'] = np.where(df2['isBuyer']==True,-1,1)*df2['Total_trade']
+    df2['cumsum'] = df2['Price_delta'].cumsum()
+    return df2
 
 
-df = getdata(symbol='ETHUSDT', interval='1h', lookback='5000')
-strat = 'High_Low'
-df = applyindicators(df, strat=strat)
-tradesdf = Testing_strat(df, strat=strat)
-#Plot_visual(df, tradesdf)
-stats = trades_stats(tradesdf)
 
+#%% Plot all the symbols
 
-# %% Mega Backtest
-symbols = ['BNBUSDT', 'BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'DOGEUSDT']
-strat = 'Lazy_Bear'
-Dict_for_strat = {}
-for symbol in symbols:
-    Dict_for_strat[symbol] = {}
-    df = getdata(symbol, interval='1h', lookback='1000')
-    df = applyindicators(df, strat=strat)
+#NEED TO CHANGE IF WE WANT VISUALS. MAKE A BASELINE OF INDICATORS FOR THE PLOTS
 
-    Dict_for_strat[symbol]['tradesdf'] = Testing_strat(df, strat=strat)
-    Dict_for_strat[symbol]['stats'] = trades_stats(Dict_for_strat[symbol]['tradesdf'])
-
-
-# %% Plot all of them
-Plot_visual(df, tradesdf)
+# #needs to have some baseline subset of columns always so it is easier to plot
+# def Plot_all_symbols(indicators_dict,symbols):
+#     for symbol in symbols:
+#         plt.plot(indicators_dict[symbol][['Close','SMA_13','SMA_MAX','Upper_20_std','Lower_20_std']])
+#         plt.title(symbol)
+#         plt.show()
+        
+# def Plot_all_symbols_chan(indicators_dict,symbols):
+#     for symbol in symbols:
+#         plt.plot(indicators_dict[symbol][['Close','EMA_100','Chan_Short','Chan_Long']])
+#         plt.title(symbol)
+#         plt.show()       
+        
+        
+        
+        
