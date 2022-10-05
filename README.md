@@ -44,3 +44,8 @@ Uses Mermaid Markdown https://mermaid.live/
             Trade --> API
     end
 ```
+
+## General Practice
+Currently, we are working on developing a bot that will run on your local machine. 
+The hope is to easily add complicated or simple trading strategies with code to mimic all of the ones youtubers use as clickbait.
+With this software, we are able to backtest their strats for years at a time across several different cryptos and implement the strategy on a live Crypto Bot. 
