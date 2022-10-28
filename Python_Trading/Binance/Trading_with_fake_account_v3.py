@@ -11,7 +11,7 @@ path, filename = os.path.split(os.path.realpath(__file__))
 # should got to Python_Trading AKA one directory up from current file's directory
 os.chdir(path+"\..")
 
-import Functions.Binance_Functions_v2 as func
+import Functions.Binance_Functions_v3 as func
 import pandas as pd
 from binance.client import Client
 import time
@@ -59,16 +59,19 @@ for symbol in tradesdf.symbol:
     indicators_dict[symbol] = pd.DataFrame()
     indicators_dict[symbol] = func.getminutedata(symbol, '5m', '1000', client)
     indicators_dict[symbol] = func.applyindicators(indicators_dict[symbol],strat = strategy)
-    indicators_dict[symbol] = func.conditions(indicators_dict[symbol], strategy)
+    indicators_dict[symbol] = func.buy_sell_conditions(indicators_dict[symbol], strategy)
 
 # %% Set up the tsl dataframes for when a buy order is triggered
 tsl_dicts = {}
 for symbol in symbols:
     tsl_dicts[symbol] = pd.DataFrame()
 
+sl_dicts = {}
+for symbol in symbols:
+    sl_dicts[symbol] = 0
 # %% Makes initial plots of the data to examin if i want to start trading
-func.Plot_all_symbols(indicators_dict, symbols)
-i = 0
+#func.Plot_all_symbols(indicators_dict, symbols)
+#i = 0
 
 # %% Make a buy limit order
 # -> needs a price quanity
@@ -78,14 +81,15 @@ while True:
     time.sleep(5)
 
     # should make a plot with the df_indicators ever
-    if (i % 360 == 0):
-        # visualize dataframe
-        func.Plot_all_symbols(indicators_dict, symbols)
-    i = i+1
+    # if (i % 360 == 0):
+    #     # visualize dataframe
+    #     func.Plot_all_symbols(indicators_dict, symbols)
+    # i = i+1
+    
     print(tradesdf[tradesdf.open_trade == True].symbol)
     try:
-        tradesdf, tsl_dicts, indicators_dict = func.trader(
-            1000, client, tradesdf, tsl_dicts, strategy, order)
+        tradesdf, tsl_dicts, indicators_dict, sl_dict= func.trader(
+            1000, client, tradesdf, tsl_dicts, sl_dicts, strategy, order)
         account_df = client.get_account()
         account_df = pd.DataFrame(account_df['balances'])
         for symbol in symbols:
