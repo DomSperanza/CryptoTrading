@@ -19,7 +19,7 @@ import ta
 import numpy as np
 from scipy.stats import zscore
 import sqlalchemy
-from binance import ThreadedWebsocketManager
+#from binance import ThreadedWebsocketManager
 import time
 import matplotlib.pyplot as plt
 from datetime import datetime,timezone,timedelta
@@ -30,14 +30,27 @@ import math
 
 
 def getrangedata(symbol,interval,start, end, client):
+    '''
+    Get the data from a designated start and ending position
+
+    Inputs: symbol(str), interval(str):'5m',start(float):uSec,end(float):uSec,Client:(client)
+
+    Returns:Dataframe with candelstick data for specified time periods
+
+    '''
+    
+    #Connects to Binance client and makes the dictionary into a dataframe
     frame = pd.DataFrame(client.get_historical_klines(symbol,
                                                       interval,
                                                       start_str = start,
                                                       end_str = end))
     
+    #pulls only columns we want
     frame = frame.iloc[:,0:5]
+    #labels columns
     frame.columns = ['Time','Open','High','Low','Close']
     frame.set_index('Time',inplace = True)
+    #changes time to a datetime object
     frame.index = pd.to_datetime(frame.index,unit = 'ms')
     frame = frame.astype(float)
 
@@ -45,18 +58,30 @@ def getrangedata(symbol,interval,start, end, client):
 
 
 def getminutedata(symbol,interval, lookback,client):
+    '''
+    pulls data from Binance client looking back until present time
+    
+    Inputs: symbol(str),interval(str):'5m',lookback(str):'1000',Client = client)
+
+    Returns: Dataframe with candelstick data for specfied lookback to present. 
+    '''
+
+    #connects to binance client and pulls dictionary into dataframe
     frame = pd.DataFrame(client.get_historical_klines(symbol,
                                                       interval,
                                                       lookback +' min ago UTC'))
     
-
+    #grabs the columns we want from the dataframe
     frame = frame.iloc[:,0:6]
+    #relabels the columnsnames
     frame.columns = ['Time','Open','High','Low','Close','Volume']
     frame.set_index('Time',inplace = True)
+    #convertss to datetime object for Time
     frame.index = pd.to_datetime(frame.index,unit = 'ms')
     frame = frame.astype(float)
     #This was to filter out outliers in the data. Mainly used for the fake account cause
     #some of the values were BS
+    #will be able to removewhen we have our own papertrading software made
     
     #z_scores = zscore(frame)
     # abs_z_scores = np.abs(z_scores)
@@ -68,6 +93,8 @@ def getminutedata(symbol,interval, lookback,client):
 #%% Functions for adding stuff to the indicators DF
 
 def crossabove(fast, slow):
+    #Checks to see if the one line crosses above another line
+    #Fast goes above slow
     series = pd.Series(np.where(fast > slow, 1, 0))
     series = series.diff()
     series = np.where(series == 1, 1, 0)
@@ -75,6 +102,8 @@ def crossabove(fast, slow):
 
 
 def crossbelow(fast, slow):
+    #checks to see if one line crosses below another line
+    #fast goes below slow
     series = pd.Series(np.where(fast < slow, 1, 0))
     series = series.diff()
     series = np.where(series == 1, 1, 0)
@@ -82,9 +111,22 @@ def crossbelow(fast, slow):
 
 
 def applyindicators(df, strat):
+    '''
+    Purpose: Make new columns in the Dataframe based on the existing columns
+    - This is whereindicators are developed from looking at pine script and converting to Python
+    - These should be the exact same as the Backtesting.py scrip indicators
+    
+    Input:df: dataframe with Time, High, Low, Open,Close, and Volume Data
+    strat(str): string of which strategy you are using
+
+    Return: Original DataFrame With technical indicators so we can mimic strat online. 
+    '''
     # for plot purposes
     df['SMA_50'] = ta.trend.sma_indicator(df.Close, window=50)
     
+
+    #I will go through and paste Youtubevideo links for each of the strats
+    # I will also go and paste the tradingview indicators that i converted from pine script. 
     if strat == 'High_Low':
         # SMAs
         df['SMA_50'] = ta.trend.sma_indicator(df.Close, window=50)
@@ -432,6 +474,14 @@ def buy_sell_conditions(df,strat):
 #Right now it is set up at a 1% trailing stop loss always. 
 #
 def tsl(symbol,client,df = pd.DataFrame(),percent = .99):
+    '''
+    Purpose: When you enter a position, a new database will be created and continuously updated to keep track of a trailing stoploss
+
+    Inputs: Symbol(str), client = Client, df(DataFrame): Current DF to keep building upon, percent(float): how much risk are you taking?
+
+    Return: a TSL df that adds onone additional row to the dataframe every time the bot runs through a loop. 
+    '''
+    #Checks to see if the dataframe has been made yet. If not, add the frist row. 
     if len(df)==0:
         df = pd.DataFrame(client.get_ticker(symbol = symbol),index = [0])
         df = df[['closeTime','lastPrice']]
@@ -439,6 +489,8 @@ def tsl(symbol,client,df = pd.DataFrame(),percent = .99):
         df['lastPrice'] = float(df['lastPrice'])
         df['Benchmark'] = df['lastPrice'].cummax()
         df['TSL'] = df['Benchmark']*percent
+    
+    # Adds another row onto the trailing stoploss dataframe
     else:
         df2 = pd.DataFrame(client.get_ticker(symbol = symbol),index = [0])
         df2 = df2[['closeTime','lastPrice']]
@@ -448,8 +500,19 @@ def tsl(symbol,client,df = pd.DataFrame(),percent = .99):
         df['Benchmark'] = df['lastPrice'].cummax()
         df['TSL'] = df['Benchmark']*percent
     return df
-        
+
+
 def recent_swing_sl(symbol,client,interval = '5m',candels = 10, min_risk = .005):
+    '''
+    Purpose: Looks for the recent swing lowbased on x number of candelsticks.
+    - Uses this information to create a stop lossb based on the youetube strategy.
+    - many online strats say "use recent swing low"fairly abigious statement. 
+    - This is my interpretation of that statement
+
+    Inputs: symbol(str), client = Client, interval(str) = '5m' in min, candels(int), min_risk(float) = percentage. default .5%
+
+    Returns: The recent swing low stop loss OR the buyprice *0.995, whichever is smaller
+    '''
     order = client.get_my_trades(symbol = symbol)[-1]
     end = order['time']
     start = end-int(interval[:-1])*candels*1000*60
@@ -459,6 +522,13 @@ def recent_swing_sl(symbol,client,interval = '5m',candels = 10, min_risk = .005)
     return SL 
 
 def take_profit(SL,symbol,client,target = 2):
+    '''
+    Purpose: Sets your take_profit tartgetbased on your StopLoss value
+
+    Inputs: SL(float):generated from recent swing or tsl, symbol, client = client, target: amount of riskyou want default 2 times whatever you are risking
+
+    Return: The take profit value. If hit, the position will be sold at the profit. 
+    '''
     order = client.get_my_trades(symbol = symbol)[-1]
     buy_price= float(order['price'])
     risk = 1-(SL/buy_price)
