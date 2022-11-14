@@ -1,76 +1,58 @@
+from http import client
 import os
 from dotenv import load_dotenv
+import pandas as pd
+import strategies as st
+import brokers as br
+from binance.client import Client
 
 
-def cryptobot(symbol: str, strategy: str, paper: bool = True) -> None:
+STOCKS = ['SPY','DIA']
+CRYPTOS = ['BNBUSDT', 'BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'DOGEUSDT']
+
+# # loads in environment variables from .env file
+# load_dotenv()
+
+# # assign desired API keys
+# api_key = os.getenv('BINANCE_PAPER_API')
+# api_secret = os.getenv('BINANCE_PAPER_SECRET')
+
+strategy = st.Boom
+broker = br.Binance
+
+class CryptoBot(strategy,broker):
     '''
     Activates the cryptobot to begin trading based on a given strategy.
 
     Parameters:
-        symbol : str
-            The symbol of the crypto to be traded
-        strategy : str
-            The strategy to be implemented
-        paper : bool, default True
-            Paper (simulated) or real trading
+    symbol : str
+        The symbol of the crypto to be traded
 
-    Returns:
-        None
-
+    Inherited:
+    df : pd.Dataframe
+        Dataframe of the 
     '''
 
-    # loads in environment variables from .env file
-    load_dotenv()
-    if paper:
-        # test/paper enviro
-        key_var = 'BINANCE_PAPER_API'
-        secret_var = 'BINANCE_PAPER_SECRET'
-    else:
-        pass
-        # # real trading
-        key_var = 'BINANCE_API'
-        secret_var = 'BINANCE_SECRET'
+    def __init__(self, symbol, **kwargs):
+        # inherits all methods from the passed strategy and broker
+        strategy.__init__(self, **kwargs)
+        broker.__init__(self, symbol, **kwargs)
 
-    # assign desired API keys
-    api_key = os.getenv(key_var)
-    api_secret = os.getenv(secret_var)
+        self.symbol = symbol
 
-    # print(api_key, api_secret)
-    # client = Client(api_key, api_secret, testnet=paper)
+    def run_backtest(self, interval:str = '1m', lookback:str = '400'):
+        self.get_data(interval,lookback)
+        self.apply_indicators()
+        self.apply_strat()
+        self.plot_visual()
+        return self.trades_stats()
 
-
-if __name__ == '__main__':
-
-    # input restrictions
-    allowed_symbols = ['BTCUSDT']
-    allowed_strategies = ['heikenashi']
-    bools = {'true': True, 'false': False, }
-
-    # user input + restriction checks
-    while True:
-        symbol = input('Enter Symbol: ').upper()
-
-        if symbol in allowed_symbols:
-            break
-
-        print("-- Enter a valid symbol --")
-
-    while True:
-        strategy = input('Enter Strategy: ').lower()
-
-        if strategy in allowed_strategies:
-            break
-
-        print("-- Enter a valid strategy --")
-
-    while True:
-        paper = input('Paper trading? (True or False):').lower()
-
-        try:
-            paper = bools[paper]
-            break
-        except:
-            print("-- Enter a valid boolean --")
-
-    # run bot with user inputs
-    cryptobot(symbol, strategy, paper)
+#backtest
+strat_log = dict()
+for symbol in ['BTCUSDT']:
+    strat_log[symbol] = dict()
+    bot = CryptoBot(symbol)
+    stats = bot.run_backtest()
+    strat_log[symbol] = stats
+    print(stats)
+    # print(bot.df.head(),'\n',bot.df.tail())
