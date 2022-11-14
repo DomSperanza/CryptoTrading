@@ -16,6 +16,8 @@ Purpose:
     can live in this script and binance functions can be ported over
     
     Going to be using methods similar to Algovibes from youtube to backtest
+
+    Franco has been turning this into something more object orientated. Ill take a class on OOP and probably move away from thisstyle
     
 Packages needed: ta, python-binance, pandas, numpy, etc
 """
@@ -23,6 +25,7 @@ Packages needed: ta, python-binance, pandas, numpy, etc
 # %% Import Packages needed
 
 # should work ony any computer
+#These imports included a lot of trial and error packages. Many are still  not used
 import ta
 import pandas as pd
 import numpy as np
@@ -36,8 +39,6 @@ path, filename = os.path.split(os.path.realpath(__file__))
 # should got to Python_Trading AKA one directory up from current file's directory
 os.chdir(path+"\..")
 
-# set up the correct dirrectory
-# os.chdir(r'C:\Users\dvspe\Desktop\Python_Trading')
 
 
 # %% Set up the Client from binance to get the data. No key needed
@@ -46,6 +47,13 @@ client = Client()
 
 # %% Keep all functions here  with labels as to what they do.
 def getdata(symbol, interval='1m', lookback='400', client=client):
+    '''
+    pulls data from Binance client looking back until present time
+    
+    Inputs: symbol(str),interval(str'1m',lookback(str) In Hours:'400',Client = client)
+
+    Returns: Dataframe with candelstick data for specfied lookback to present. 
+    '''
     frame = pd.DataFrame(client.get_historical_klines(symbol,
                                                       interval,
                                                       lookback + ' hours ago UTC'))
@@ -60,6 +68,8 @@ def getdata(symbol, interval='1m', lookback='400', client=client):
 
 
 def crossabove(fast, slow):
+       #Checks to see if the one line crosses above another line
+    #Fast goes above slow
     series = pd.Series(np.where(fast > slow, 1, 0))
     series = series.diff()
     series = np.where(series == 1, 1, 0)
@@ -67,6 +77,8 @@ def crossabove(fast, slow):
 
 
 def crossbelow(fast, slow):
+       #checks to see if one line crosses below another line
+    #fast goes below slow
     series = pd.Series(np.where(fast < slow, 1, 0))
     series = series.diff()
     series = np.where(series == 1, 1, 0)
@@ -75,6 +87,16 @@ def crossbelow(fast, slow):
 
 # define all the indicators needed for the strat testing
 def applyindicators(df, strat):
+        '''
+    Purpose: Make new columns in the Dataframe based on the existing columns
+    - This is whereindicators are developed from looking at pine script and converting to Python
+    - These should be the exact same as the Backtesting.py scrip indicators
+    
+    Input:df: dataframe with Time, High, Low, Open,Close, and Volume Data
+    strat(str): string of which strategy you are using
+
+    Return: Original DataFrame With technical indicators so we can mimic strat online. 
+    '''
     # for plot purposes
     df['SMA_50'] = ta.trend.sma_indicator(df.Close, window=50)
 
@@ -394,6 +416,15 @@ def GetTradesdf(buydates, buyprice, selldates, sellprice):
 
 # define the strategies to get the buy and sell dates and times
 def Testing_strat(df, strat):
+    '''
+    Purpose: Implement trading rules based on indicator values
+    - Gets the Buy and Sell dates and prices based on the Youtube strat
+    - returnsa DF with all the info to be analyzed on how weel the strat worked
+    
+    Inputs: df(DataFrame):with indicators, strat(str): must be same as one used in applyindicators()
+
+    Returns: buydates,selldates,buyprice,sellprice for the given strat
+    '''
     in_position = False
     buydates = []
     buyprice = []
@@ -607,6 +638,8 @@ stats = trades_stats(tradesdf)
 
 
 # %% Mega Backtest
+#tests for however many symbol pairs you want
+#could be editted in the future to check hyperparametersand find optimal
 symbols = ['BNBUSDT', 'BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'DOGEUSDT']
 strat = 'Lazy_Bear'
 Dict_for_strat = {}
