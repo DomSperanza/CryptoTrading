@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 import numpy as np
 import pandas as pd
 import ta
+import matplotlib.pyplot as plt
 
 
 class StrategyClass(ABC):
