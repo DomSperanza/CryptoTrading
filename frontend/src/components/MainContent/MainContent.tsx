@@ -1,7 +1,6 @@
 import React, { FC, useEffect, useState } from 'react';
 import './MainContent.css';
 import logo from '../../logo.svg';
-import parse, { Element } from 'html-react-parser';
 
 interface MainContentProps {}
 
@@ -10,7 +9,7 @@ const MainContent: FC<MainContentProps> = () => {
       name: '',
       about: '',
     })
-    const [graph, setGraph] = useState('')
+    const [graph, setGraph] = useState<string|undefined>('')
   
     async function getData() {
       const url='http://localhost:5000/'
@@ -23,12 +22,11 @@ const MainContent: FC<MainContentProps> = () => {
           throw new Error('Network response not OK');
         }
         return response.json()
-        
       })
       .then((data) => {
         setData(data)
-  
-      }).catch((error) => {
+      })
+      .catch((error) => {
         console.error('There has been a problem with your fetch operation',
         error);
       })
@@ -42,40 +40,35 @@ const MainContent: FC<MainContentProps> = () => {
         if (!response.ok) {
           throw new Error('Network response not OK 2');
         }
-        return response.json()
-        
+        return response.text()
       })
-      .then((data) => {
-        console.log(data)
-        setGraph(data)
-  
-      }).catch((error) => {
+      .then((html:any) => {
+        // ! As a note, this is an unsecure way of displaying HTML
+        // ! this app is only designed for local host usage, so 
+        // ! raw HTML injection theoretically can be trusted from the flask server
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html,"text/html")
+        const docBody = doc.querySelector('body')?.innerHTML
+        // console.log(docBody)
+        setGraph(docBody)
+      })
+      .catch((error) => {
         console.error('There has been a problem with your fetch operation',
         error);
       })
     }
-    
-    const parser = (input: string) =>
-    parse(input, {
-      replace: domNode => {
-        if (domNode instanceof Element && domNode.attribs.class === 'remove') {
-          return <></>;
-        }
-      }
-    });
 
     useEffect(() => {
         getData()
         getData2()
+        setGraph('')
     }, [])
     
-  
     return (
       <div>
-          <img src={logo} className="App-logo" alt="logo" />
           <h1>Your name: {data.name}</h1>
           <h2>The title: {data.about}</h2>
-          <React.Fragment>{parser(graph)}</React.Fragment>
+          <div dangerouslySetInnerHTML={{__html:graph!}} className='border'></div>
   
       </div>
     );

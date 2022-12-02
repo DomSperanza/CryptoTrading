@@ -17,5 +17,5 @@ def hello_world():
 @app.route("/graph/", methods=['GET'])
 def send_graph():
     # return render_template('positives.html',)
-    return jsonify(render_template('positives.html',))
+    return render_template('test.html',)
     # return send_from_directory('positives.html','/api')
