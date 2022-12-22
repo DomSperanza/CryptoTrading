@@ -87,7 +87,7 @@ def crossbelow(fast, slow):
 
 # define all the indicators needed for the strat testing
 def applyindicators(df, strat):
-        '''
+    '''
     Purpose: Make new columns in the Dataframe based on the existing columns
     - This is whereindicators are developed from looking at pine script and converting to Python
     - These should be the exact same as the Backtesting.py scrip indicators
@@ -97,6 +97,7 @@ def applyindicators(df, strat):
 
     Return: Original DataFrame With technical indicators so we can mimic strat online. 
     '''
+    
     # for plot purposes
     df['SMA_50'] = ta.trend.sma_indicator(df.Close, window=50)
 
@@ -321,6 +322,7 @@ def applyindicators(df, strat):
 
 
     if strat =='Lazy_Bear': #youtube 80% winrate
+
         #Rules for trade:
             ## must be green coral trend (positive slope)
             ## must close above (start looking)
@@ -395,6 +397,82 @@ def applyindicators(df, strat):
         df['DIPlus'] = DIPlus
         df['DIMinus'] = DIMinus
         
+    if strat =='TraderIQ_1650':
+        '''
+        Strat Rules:
+        #https://www.youtube.com/watch?v=OtQygVyFB9A&list=PLrj3vfjsam-COzIUSdD7MNoys9BjWDt1C&index=1&t=1s&ab_channel=TradeIQ
+        #trading indicators: 
+            #10 in 1 dif mov avg, 200 ema, 50 wma
+            #trader XO macro trend scanner, 
+            #stc a better macd
+        #trading strat:
+            #price above moving average, 
+            #50 wma above 200 ema, 
+            #pull back into 50 wma not exceed 200 ema, 
+            #trader xo makes new buy, 
+            #STC must be green, 
+            #STC above 80, 
+            #STC positive slope 
+        #money management after buy signal:
+            #SL at recent swing low
+            #TP = 1:1 Risk Reward. 
+            #When TP is hit, change TP = 2:1 Risk Reward
+            #When TP is hit, increase SL to old TP targets
+            #ie after one TP is hit, new SL is buy price, when 2 TP is hit, SL is first TP, etc. 
+        '''
+        #EMA and WMA
+        df['EMA_200'] = ta.trend.ema_indicator(df.Close,window = 200)
+        df['WMA_50'] = ta.trend.wma_indicator(df.Close, window=50)
+        
+        # trader XO doesnt show his souce code. What a dick.... Looks like it is just more EMA cross overs tho
+        # It looks like the STC is more strict than his anyway and has source code
+        
+        #STC - dude who wrote the code used shitty variables.... 
+        #final output matches exactly what is on the trading view chart tho. 
+       # EMA_fast = ta.trend.ema_indicator(df.Close,window = 26)
+        #EMA_slow = ta.trend.ema_indicator(df.Close,window = 50)
+       # macd = (EMA_fast-EMA_slow)
+        
+        def aaaa(bbb,fast_len,slow_len):
+            fast = ta.trend.ema_indicator(bbb,window = fast_len)
+            slow = ta.trend.ema_indicator(bbb,window = slow_len)
+            return fast-slow
+        lookback_len = 12
+        fast_len = 26
+        slow_len = 50
+        aaa = .5
+        
+        ccccc = 0
+        ddd = 0
+        dddddd = 0
+        eeeee = 0
+        bbbbbb = aaaa(df.Close,fast_len,slow_len)
+        ccc = bbbbbb.rolling(lookback_len).min()
+        cccc = bbbbbb.rolling(lookback_len).max()-ccc
+        ccccc = [0]*len(df)
+        ddd = [0]*len(df)
+        eeeee = [0]*len(df)
+        dddddd = [0]*len(df)
+        for i in range(1,len(ccc)):
+            if cccc[i]>0:
+                ccccc[i] = (bbbbbb[i]-ccc[i])/cccc[i]*100
+            else:
+                ccccc[i] = ccccc[i-1]
+        for j in range(1,len(ddd)):
+            ddd[j] = ddd[j-1]+aaa*(ccccc[j]-ddd[j-1])
+        ddd = pd.Series(ddd)
+        dddd = ddd.rolling(lookback_len).min()
+        ddddd = ddd.rolling(lookback_len).max()-dddd
+        for k in range(1,len(df)):
+            if ddddd[k]>0:
+                dddddd[k] = (ddd[k]-dddd[k])/ddddd[k]*100
+            else:
+                ddddd[k] = ddddd[k-1]
+        for m in range(1,len(df)):
+            eeeee[m] = eeeee[m-1]+aaa*(dddddd[m]-eeeee[m-1])
+        
+        df['STC'] = eeeee
+        df['color'] = np.where(df.STC>df.STC.shift(),'green','red')
     # Return  the updated dataframe.
     return df
 
@@ -629,8 +707,8 @@ def trades_stats(tradesdf):
 # testing with data single symbol
 
 
-df = getdata(symbol='ETHUSDT', interval='1h', lookback='5000')
-strat = 'High_Low'
+df = getdata(symbol='BTCUSDT', interval='5m', lookback='200')
+strat = 'TraderIQ_1650'
 df = applyindicators(df, strat=strat)
 tradesdf = Testing_strat(df, strat=strat)
 #Plot_visual(df, tradesdf)
