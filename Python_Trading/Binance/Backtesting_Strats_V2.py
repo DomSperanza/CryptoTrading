@@ -17,7 +17,8 @@ Purpose:
     
     Going to be using methods similar to Algovibes from youtube to backtest
 
-    Franco has been turning this into something more object orientated. Ill take a class on OOP and probably move away from thisstyle
+    Franco has been turning this into something more object orientated. 
+    Ill take a class on OOP and probably move away from this style
     
 Packages needed: ta, python-binance, pandas, numpy, etc
 """
@@ -42,10 +43,40 @@ os.chdir(path+"\..")
 
 
 # %% Set up the Client from binance to get the data. No key needed
-client = Client()
+client = Client(tld = 'us')
 
 
 # %% Keep all functions here  with labels as to what they do.
+
+
+def getrangedata(symbol,interval,start, end, client):
+    '''
+    Get the data from a designated start and ending position
+
+    Inputs: symbol(str), interval(str):'5m',start(float):uSec,end(float):uSec,Client:(client)
+
+    Returns:Dataframe with candelstick data for specified time periods
+
+    '''
+    
+    #Connects to Binance client and makes the dictionary into a dataframe
+    frame = pd.DataFrame(client.get_historical_klines(symbol,
+                                                      interval,
+                                                      start_str = start,
+                                                      end_str = end))
+    
+    #pulls only columns we want
+    frame = frame.iloc[:,0:5]
+    #labels columns
+    frame.columns = ['Time','Open','High','Low','Close']
+    frame.set_index('Time',inplace = True)
+    #changes time to a datetime object
+    frame.index = pd.to_datetime(frame.index,unit = 'ms')
+    frame = frame.astype(float)
+
+    return frame
+
+
 def getdata(symbol, interval='1m', lookback='400', client=client):
     '''
     pulls data from Binance client looking back until present time
@@ -695,7 +726,7 @@ def Buy_and_Hold(df):
     return profit
 
 
-def trades_stats(tradesdf):
+def trades_stats(tradesdf,df):
     statsdict = {}
     statsdict['profit_no_fee'] = (tradesdf.profit_rel+1).prod()
     statsdict['profit_fee'] = (tradesdf.profit_net+1).prod()
@@ -704,31 +735,31 @@ def trades_stats(tradesdf):
     return statsdict
 
 # %%
-# testing with data single symbol
+# # testing with data single symbol
 
 
-df = getdata(symbol='BTCUSDT', interval='5m', lookback='200')
-strat = 'TraderIQ_1650'
-df = applyindicators(df, strat=strat)
-tradesdf = Testing_strat(df, strat=strat)
-#Plot_visual(df, tradesdf)
-stats = trades_stats(tradesdf)
+# df = getdata(symbol='BTCUSDT', interval='5m', lookback='200')
+# strat = 'TraderIQ_1650'
+# df = applyindicators(df, strat=strat)
+# tradesdf = Testing_strat(df, strat=strat)
+# #Plot_visual(df, tradesdf)
+# stats = trades_stats(tradesdf,df)
 
 
 # %% Mega Backtest
 #tests for however many symbol pairs you want
 #could be editted in the future to check hyperparametersand find optimal
-symbols = ['BNBUSDT', 'BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'DOGEUSDT']
-strat = 'Lazy_Bear'
-Dict_for_strat = {}
-for symbol in symbols:
-    Dict_for_strat[symbol] = {}
-    df = getdata(symbol, interval='1h', lookback='1000')
-    df = applyindicators(df, strat=strat)
+# symbols = ['BNBUSDT', 'BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'DOGEUSDT']
+# strat = 'Lazy_Bear'
+# Dict_for_strat = {}
+# for symbol in symbols:
+#     Dict_for_strat[symbol] = {}
+#     df = getdata(symbol, interval='1h', lookback='1000')
+#     df = applyindicators(df, strat=strat)
 
-    Dict_for_strat[symbol]['tradesdf'] = Testing_strat(df, strat=strat)
-    Dict_for_strat[symbol]['stats'] = trades_stats(Dict_for_strat[symbol]['tradesdf'])
+#     Dict_for_strat[symbol]['tradesdf'] = Testing_strat(df, strat=strat)
+#     Dict_for_strat[symbol]['stats'] = trades_stats(Dict_for_strat[symbol]['tradesdf'])
 
 
 # %% Plot all of them
-Plot_visual(df, tradesdf)
+#Plot_visual(df, tradesdf)
