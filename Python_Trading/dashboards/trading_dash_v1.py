@@ -53,6 +53,8 @@ cache = Cache(app.server, config={
 
 
 app.layout = html.Div(children=[
+    #redirects to home flask app
+    html.A('Cryptobot Home', href='http://localhost:5000'),
     
     #app header
     html.H1('Printing Money Dashbaord'),

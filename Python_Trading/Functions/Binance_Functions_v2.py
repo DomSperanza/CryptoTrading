@@ -17,8 +17,6 @@ from binance import Client
 import ta
 import numpy as np
 from scipy.stats import zscore
-import sqlalchemy
-from binance import ThreadedWebsocketManager
 import time
 import matplotlib.pyplot as plt
 from datetime import datetime,timezone

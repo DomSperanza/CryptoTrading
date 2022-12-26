@@ -10,6 +10,17 @@ pipreqs . --force --ignore **/Archive
 ```
 More info: https://github.com/bndr/pipreqs
 
+<!-- To start the flask app (dashboard)
+```
+flask run
+``` -->
+
+To run the app in a docker container:
+```
+docker build .
+```
+
+
 ---
 
 Below is a flowchart for describing the *(desired)* structure of the program.

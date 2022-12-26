@@ -50,6 +50,9 @@ from datetime import date
 app = Dash(__name__)
 
 app.layout = html.Div(children=[
+    #redirects to home flask app
+    html.A('Cryptobot Home', href='http://localhost:5000'),
+
     #app header
     html.H1('Printing Money Backtesting Dashboard'),
     html.H3('Backtest your strats here'),
@@ -108,4 +111,6 @@ style = {'text-align':'center','display':'inline-block','width':'100%'}
 
 #%% Run the app and see results
 if __name__ == '__main__':
-    app.run_server(debug = True,use_reloader=False)
+    app.run_server( debug = True,
+                    port=8051,
+                    use_reloader=False)
