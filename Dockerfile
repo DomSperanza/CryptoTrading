@@ -1,4 +1,4 @@
-FROM python
+FROM python:3.9
 
 WORKDIR /app
 
@@ -11,5 +11,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 # copy all other files
 COPY . /app
 
-WORKDIR /app/Python_Trading/
-
+WORKDIR /app/
