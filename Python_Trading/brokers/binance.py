@@ -11,7 +11,7 @@ class Binance(BrokerClass):
 
     def __init__(self, 
                 symbol: str,
-                client: Client = Client()):
+                client: Client = Client(tld = 'us')):
         self.symbol = symbol
         self.client = client
 

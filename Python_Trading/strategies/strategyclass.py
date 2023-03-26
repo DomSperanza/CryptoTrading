@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import ta
 import matplotlib.pyplot as plt
+import plotly.express as px
 
 
 class StrategyClass(ABC):
@@ -70,6 +71,16 @@ class StrategyClass(ABC):
                     marker='v', color='r', s=200)
         plt.grid()
         plt.show()
+        
+    def plot_visual_plotly(self):
+        fig = px.line(self.df, x=self.df.index, y='SMA_50', title=self.symbol)
+        fig.add_scatter(x=self.trades_df.buydates, y=self.trades_df.buyprices, mode='markers',
+                marker=dict(symbol='triangle-up', size=10, color='green'))
+        fig.add_scatter(x=self.trades_df.selldates, y=self.trades_df.sellprices, mode='markers',
+                marker=dict(symbol='triangle-down', size=10, color='red'))
+        fig.update_layout(plot_bgcolor='black', paper_bgcolor='black',
+                  xaxis=dict(title='Date'), yaxis=dict(title='Price'))
+        fig.show()
 
     def buy_and_hold(self):
         buy = self.df.Close[1]
