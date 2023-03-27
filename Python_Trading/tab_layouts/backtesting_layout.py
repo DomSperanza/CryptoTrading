@@ -1,6 +1,7 @@
 from dash import html
 from dash import dcc
 from dash import dash_table
+import plotly.express as px
 
 currency_pairs = ['BTC/USDT', 'ETH/USDT', 'BNB/USDT', 'ADA/USDT', 'XRP/USDT']
 intervals = ['1m','5m','15m','30m','1h','6h','1d']
@@ -14,6 +15,8 @@ stats_table = dash_table.DataTable(
     style_cell={'textAlign': 'center'}
 )
 
+# Empty Plotly Express plot
+plotly_trade = px.scatter()
 
 layout = html.Div([
     html.H1('Backtesting', style={'textAlign': 'center'}),
@@ -61,6 +64,13 @@ layout = html.Div([
         html.Button('Test_Strat', id='test_button_id', style={'width': '100px', 'height': '50px'}),
         style={'textAlign': 'center', 'paddingTop': '20px', 'marginBottom': '20px'}
     ),
-    html.Div(stats_table, style={'width': '50%', 'margin': '0 auto'})
-    
+    html.Div(stats_table, style={'width': '50%', 'margin': '0 auto'}),
+    dcc.Graph(
+        id='plotly_trade_id',
+        figure=plotly_trade,
+        style={
+            'height': '800px',  # adjust the height as desired
+            'margin': '20px'  # add margin around the plot
+        }
+    )
 ])

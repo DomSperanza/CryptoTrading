@@ -73,14 +73,16 @@ class StrategyClass(ABC):
         plt.show()
         
     def plot_visual_plotly(self):
-        fig = px.line(self.df, x=self.df.index, y='SMA_50', title=self.symbol)
+        fig = px.line(self.df, x=self.df.index, y='Close', title=self.symbol)
         fig.add_scatter(x=self.trades_df.buydates, y=self.trades_df.buyprices, mode='markers',
-                marker=dict(symbol='triangle-up', size=10, color='green'))
+                marker=dict(symbol='triangle-up', size=10, color='green'),
+                text='buy')
         fig.add_scatter(x=self.trades_df.selldates, y=self.trades_df.sellprices, mode='markers',
-                marker=dict(symbol='triangle-down', size=10, color='red'))
+                marker=dict(symbol='triangle-down', size=10, color='red'),
+                text='sell')
         fig.update_layout(plot_bgcolor='black', paper_bgcolor='black',
                   xaxis=dict(title='Date'), yaxis=dict(title='Price'))
-        fig.show()
+        return fig
 
     def buy_and_hold(self):
         buy = self.df.Close[1]
@@ -92,6 +94,14 @@ class StrategyClass(ABC):
         statsdict = {}
         statsdict['profit_no_fee'] = (self.trades_df.profit_rel+1).prod()
         statsdict['profit_fee'] = (self.trades_df.profit_net+1).prod()
-        statsdict['winrate'] = self.trades_df.profit_bool.sum()/len(self.trades_df)
         statsdict['buyhold'] = self.buy_and_hold()
+        
+        # Check if self.trades_df is empty
+        if len(self.trades_df) > 0:
+            statsdict['winrate'] = self.trades_df.profit_bool.sum()/len(self.trades_df)
+            statsdict['num_of_trades'] = len(self.trades_df)
+        else:
+            statsdict['winrate'] = 'no trades were made'
+            statsdict['num_of_trades'] = 0
+        
         return statsdict

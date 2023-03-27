@@ -90,11 +90,9 @@ def get_data(start_button_clicks, clear_button_clicks, symbol_value, interval_va
 #gets the dataframe data and the trading strat and output
 #a table of information that displays the results. 
 @app.callback(
-    Output('stats_table_id', 'data'),
-    Input('test_button_id', 'n_clicks'),
-    State('get_data_id', 'data'),
-    State('trading_strat_id', 'value'),
-    State('symbol_id','value')
+    [Output('stats_table_id', 'data'), Output('plotly_trade_id', 'figure')],
+    [Input('test_button_id', 'n_clicks')],
+    [State('get_data_id', 'data'), State('trading_strat_id', 'value'), State('symbol_id', 'value')]
 )
 def test_strategy(test_button_clicks, data, trading_strat_value,symbol_value):
     if test_button_clicks:
@@ -108,16 +106,16 @@ def test_strategy(test_button_clicks, data, trading_strat_value,symbol_value):
         broker=br.Binance
         bot = CryptoBot(symbol = symbol_value, broker_class = broker, strategy_class = strat)
         bot.strategy.df = df
-        stats = bot.test_strat()
-
-        #df = applyindicators(df,strat =trading_strat_value )
-        #tradesdf = Testing_strat(df,strat = trading_strat_value)
-        #print(tradesdf)
-        #stats = trades_stats(tradesdf,df)
-        #print(stats)
-        return [stats]
-    return []
-
+        bot.test_strat()
+        bot.strategy.symbol = symbol_value
+        #pull out the stats
+        stats = bot.strategy.trades_stats()
+        
+        #get plotly fig
+        fig = bot.strategy.plot_visual_plotly()
+        
+        return [stats],fig
+    return [],{}
 
 
 
