@@ -6,33 +6,34 @@ import matplotlib.pyplot as plt
 
 class HeikenStoch(StrategyClass):
 
-    def __init__(self, df = pd.DataFrame, trades_df = pd.DataFrame) -> None:
+    def __init__(self, df=pd.DataFrame(), trades_df=pd.DataFrame()) -> None:
         self.df = df
         self.trades_df = trades_df
 
-    def apply_indicators(self) -> pd.Dataframe:
+    def apply_indicators(self) -> pd.DataFrame:
          # for plot purposes
-        df['SMA_50'] = ta.trend.sma_indicator(df.Close, window=50)
+        self.df['SMA_50'] = ta.trend.sma_indicator(self.df.Close, window=50)
 
         OpenH = [self.df.iloc[0].Open]*len(self.df)
         CloseH = 1/4*(self.df.Open+self.df.High+self.df.Low+self.df.Close)
         for i in range(1, len(self.df)):
             OpenH[i] = (CloseH[i-1]+OpenH[i-1])/2
-        df['OpenH'] = OpenH
-        df['HighH'] = self.df[['High', 'OpenH', 'Close']].max(axis=1)
-        df['LowH'] = self.df[['Low', 'OpenH', 'Close']].min(axis=1)
-        df['CloseH'] = CloseH
+        self.df['OpenH'] = OpenH
+        self.df['HighH'] = self.df[['High', 'OpenH', 'Close']].max(axis=1)
+        self.df['LowH'] = self.df[['Low', 'OpenH', 'Close']].min(axis=1)
+        self.df['CloseH'] = CloseH
 
         # ema
-        df['EMA_200'] = ta.trend.ema_indicator(df.CloseH, window=200)
+        self.df['EMA_200'] = ta.trend.ema_indicator(self.df.CloseH, window=200)
 
         # stoch RSI
         # d is the orange line, k is the blue line in trading view
-        df['stoch_k'] = ta.momentum.stochrsi_k(df.CloseH, window=14)
-        df['stoch_d'] = ta.momentum.stochrsi_d(df.CloseH, window=14)
-        df['rsi_crossover'] = crossabove(df.stoch_k, df.stoch_d)
+        self.df['stoch_k'] = ta.momentum.stochrsi_k(self.df.CloseH, window=14)
+        self.df['stoch_d'] = ta.momentum.stochrsi_d(self.df.CloseH, window=14)
+        self.df['rsi_crossover'] = self.crossabove(self.df.stoch_k, self.df.stoch_d)
+        return self.df
 
-    def apply_strat(self) -> pd.Dataframe:
+    def apply_strat(self) -> pd.DataFrame:
         in_position = False
         buydates = []
         buyprice = []
@@ -68,8 +69,8 @@ class HeikenStoch(StrategyClass):
                     selldates.append(self.df.iloc[i].name)
                     in_position = False
 
-        trades_df = get_trades_df(buydates, buyprice, selldates, sellprice)
-        return trades_df        
+        self.trades_df = self.get_trades_df(buydates, buyprice, selldates, sellprice)
+        return self.trades_df 
 
 
 if __name__ == '__main__':
