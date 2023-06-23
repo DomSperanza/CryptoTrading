@@ -1,4 +1,4 @@
-from turtle import rt
+#from turtle import rt
 from .strategyclass import StrategyClass
 import pandas as pd
 import numpy as np
